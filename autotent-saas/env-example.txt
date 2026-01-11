@@ -1,0 +1,11 @@
+# Supabase (Get these from Project Settings > API)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Inngest (Optional for local dev, required for Vercel)
+NEXT_PUBLIC_INNGEST_APP_ID=autotent-saas
+INNGEST_EVENT_KEY=local # or from Inngest Dashboard
+INNGEST_SIGNING_KEY= # from Inngest Dashboard
+
+# Google Gemini (Get from aistudio.google.com)
+GEMINI_API_KEY=your-gemini-api-key

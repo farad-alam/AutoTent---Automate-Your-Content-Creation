@@ -7,8 +7,12 @@ export const generateContent = inngest.createFunction(
     { id: "generate-content", concurrency: 2 },
     { event: "job/created" },
     async ({ event, step }) => {
-        const { jobId, projectId } = event.data;
+        const { jobId, projectId, scheduledFor } = event.data;
         const supabase = createServiceClient();
+
+        if (scheduledFor) {
+            await step.sleepUntil("wait-for-schedule", scheduledFor);
+        }
 
         // 1. Fetch Job & Project Details
         const projectData = await step.run("fetch-project-data", async () => {

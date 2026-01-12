@@ -33,7 +33,8 @@ create table jobs (
   project_id uuid references projects on delete cascade not null,
   user_id uuid references auth.users not null,
   keyword text not null,
-  status text default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
+  scheduled_for timestamptz, -- When the job is scheduled to run
+  status text default 'pending' check (status in ('pending', 'scheduled', 'processing', 'completed', 'failed')),
   result_title text,
   result_url text, -- Link to the published post or Sanity document
   error_message text,

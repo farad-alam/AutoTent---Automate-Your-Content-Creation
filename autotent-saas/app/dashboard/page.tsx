@@ -72,14 +72,14 @@ export default async function Dashboard() {
                     />
                     <StatCard
                         title="Total Articles"
-                        value={totalJobs}
+                        value={totalJobs || 0}
                         icon="⚡"
                         gradient="info"
                         trend={{ value: "8%", isPositive: true }}
                     />
                     <StatCard
                         title="Published Articles"
-                        value={completedJobs}
+                        value={completedJobs || 0}
                         icon="✅"
                         gradient="success"
                         trend={{ value: "15%", isPositive: true }}

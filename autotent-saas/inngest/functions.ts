@@ -1,14 +1,14 @@
 import { inngest } from "./client";
 import { generateBlogContent } from "@/lib/gemini";
 import { publishToSanity } from "@/lib/sanity";
-import { createClient } from "@/lib/supabase-server"; // Use server client
+import { createServiceClient } from "@/lib/supabase-server"; // Use service client for background jobs
 
 export const generateContent = inngest.createFunction(
     { id: "generate-content", concurrency: 2 },
     { event: "job/created" },
     async ({ event, step }) => {
         const { jobId, projectId } = event.data;
-        const supabase = await createClient();
+        const supabase = createServiceClient();
 
         // 1. Fetch Job & Project Details
         const projectData = await step.run("fetch-project-data", async () => {
@@ -42,8 +42,8 @@ export const generateContent = inngest.createFunction(
 
             // 4. Update Job Status
             await step.run("complete-job", async () => {
-                // Construct the URL (assuming standard Sanity studio or frontend URL structure, or just ID)
-                const resultUrl = `https://${project.sanity_project_id}.sanity.studio/structure/document/${sanityResult._id}`;
+                // Use the Sanity Manage URL (works for all projects)
+                const resultUrl = `https://www.sanity.io/manage/personal/project/${project.sanity_project_id}/desk/${sanityResult._type};${sanityResult._id}`;
 
                 await supabase.from('jobs').update({
                     status: 'completed',

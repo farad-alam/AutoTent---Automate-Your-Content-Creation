@@ -1,11 +1,13 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { inngest } from '@/inngest/client'
 import DashboardSidebar from '@/components/dashboard-sidebar'
 import StatCard from '@/components/stat-card'
+import DeletePendingJobsButton from '@/components/delete-pending-jobs-button'
 
 export default async function Dashboard() {
     const supabase = await createClient()
@@ -34,6 +36,55 @@ export default async function Dashboard() {
         redirect('/dashboard') // Refresh
     }
 
+    async function retryJob(formData: FormData) {
+        'use server'
+        const jobId = formData.get('jobId') as string
+
+        const supabase = await createClient()
+        const { data: job } = await supabase.from('jobs').select('*, projects(*)').eq('id', jobId).single()
+
+        if (!job) return
+
+        // Reset job to pending
+        await supabase.from('jobs').update({
+            status: 'pending',
+            error_message: null
+        }).eq('id', jobId)
+
+        // Trigger Inngest again
+        try {
+            await inngest.send({
+                name: "job/created",
+                data: {
+                    jobId: job.id,
+                    projectId: job.project_id,
+                    keyword: job.keyword
+                }
+            })
+        } catch (error: any) {
+            await supabase.from('jobs').update({
+                status: 'failed',
+                error_message: 'Retry failed. Please contact support.'
+            }).eq('id', jobId)
+        }
+
+        redirect('/dashboard')
+    }
+
+    async function deletePendingJobs(formData: FormData) {
+        'use server'
+        const supabase = await createClient()
+
+        // Delete all pending jobs for current user
+        await supabase
+            .from('jobs')
+            .delete()
+            .eq('user_id', user!.id)
+            .eq('status', 'pending')
+
+        redirect('/dashboard')
+    }
+
     async function createJob(formData: FormData) {
         'use server'
         const keyword = formData.get('keyword') as string
@@ -52,15 +103,26 @@ export default async function Dashboard() {
         if (error) console.error(error)
 
         if (job) {
-            // Trigger Inngest
-            await inngest.send({
-                name: "job/created",
-                data: {
-                    jobId: job.id,
-                    projectId: projectId,
-                    keyword: keyword
-                }
-            })
+            // Trigger Inngest with production-ready error handling
+            try {
+                await inngest.send({
+                    name: "job/created",
+                    data: {
+                        jobId: job.id,
+                        projectId: projectId,
+                        keyword: keyword
+                    }
+                })
+            } catch (inngestError: any) {
+                // Log error but don't crash the app
+                console.error('Inngest trigger failed:', inngestError.message)
+
+                // Update job with error status if Inngest completely fails
+                await supabase.from('jobs').update({
+                    status: 'failed',
+                    error_message: 'Failed to trigger background worker. Please try again or contact support.'
+                }).eq('id', job.id)
+            }
         }
 
         redirect('/dashboard')
@@ -96,21 +158,21 @@ export default async function Dashboard() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <StatCard
-                        title="Total Projects"
+                        title="Connected Sites"
                         value={totalProjects}
                         icon="📁"
                         gradient="primary"
                         trend={{ value: "12%", isPositive: true }}
                     />
                     <StatCard
-                        title="Total Jobs"
+                        title="Total Articles"
                         value={totalJobs}
                         icon="⚡"
                         gradient="info"
                         trend={{ value: "8%", isPositive: true }}
                     />
                     <StatCard
-                        title="Completed"
+                        title="Published Articles"
                         value={completedJobs}
                         icon="✅"
                         gradient="success"
@@ -129,7 +191,7 @@ export default async function Dashboard() {
                 <section className="mb-8">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Your Projects
+                            Connected Sites
                         </h2>
                     </div>
 
@@ -170,12 +232,12 @@ export default async function Dashboard() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <span className="text-2xl">➕</span>
-                                    Add New Project
+                                    Connect Your CMS
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <form action={createProject} className="space-y-4">
-                                    <Input name="name" placeholder="Project Name (e.g. My Tech Blog)" required className="border-gray-300 dark:border-gray-700" />
+                                    <Input name="name" placeholder="Site Name (e.g. My Tech Blog)" required className="border-gray-300 dark:border-gray-700" />
                                     <Input name="projectId" placeholder="Sanity Project ID" required className="border-gray-300 dark:border-gray-700" />
                                     <Input name="dataset" placeholder="Sanity Dataset (e.g. production)" required className="border-gray-300 dark:border-gray-700" />
                                     <Input name="token" type="password" placeholder="Sanity API Token" required className="border-gray-300 dark:border-gray-700" />
@@ -191,7 +253,7 @@ export default async function Dashboard() {
                 {/* Jobs Section */}
                 <section>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                        Content Generation Jobs
+                        Article Generation
                     </h2>
 
                     {/* Create Job Form */}
@@ -199,21 +261,21 @@ export default async function Dashboard() {
                         <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
                             <CardTitle className="flex items-center gap-2">
                                 <span className="text-2xl">🚀</span>
-                                Generate New Content
+                                Generate New Article
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6">
                             <form action={createJob} className="grid md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Select Project
+                                        Select Site
                                     </label>
                                     <select
                                         name="project_id"
                                         className="flex h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 transition-all"
                                         required
                                     >
-                                        <option value="">Select a project...</option>
+                                        <option value="">Select a site...</option>
                                         {projects?.map(p => (
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
@@ -221,7 +283,7 @@ export default async function Dashboard() {
                                 </div>
                                 <div className="md:col-span-2 space-y-2">
                                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Primary Keyword
+                                        Article Topic / Keyword
                                     </label>
                                     <div className="flex gap-2">
                                         <Input
@@ -231,7 +293,7 @@ export default async function Dashboard() {
                                             className="flex-1 border-gray-300 dark:border-gray-700"
                                         />
                                         <Button type="submit" className="gradient-primary text-white border-0 hover:shadow-lg px-8">
-                                            Generate
+                                            Generate Article
                                         </Button>
                                     </div>
                                 </div>
@@ -241,14 +303,22 @@ export default async function Dashboard() {
 
                     {/* Jobs Table */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {/* Table Header with Actions */}
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Articles</h3>
+                            {jobs?.some(job => job.status === 'pending') && (
+                                <DeletePendingJobsButton action={deletePendingJobs} />
+                            )}
+                        </div>
+
                         <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-900/50">
                                 <tr>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                                        Keyword
+                                        Topic
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                                        Project
+                                        Site
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                                         Status
@@ -274,9 +344,9 @@ export default async function Dashboard() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${job.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                                                    job.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                                                        job.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                                                            'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                                job.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                                    job.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                                        'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                                                 }`}>
                                                 {job.status === 'completed' && '✓ '}
                                                 {job.status === 'processing' && '⟳ '}
@@ -286,14 +356,13 @@ export default async function Dashboard() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {job.result_url ? (
-                                                <a
-                                                    href={job.result_url}
-                                                    target="_blank"
+                                            {job.status === 'completed' ? (
+                                                <Link
+                                                    href={`/dashboard/preview/${job.id}`}
                                                     className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium hover:underline"
                                                 >
-                                                    View in Studio →
-                                                </a>
+                                                    View Content →
+                                                </Link>
                                             ) : (
                                                 <span className="text-gray-400">-</span>
                                             )}

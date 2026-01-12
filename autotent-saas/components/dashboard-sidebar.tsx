@@ -12,8 +12,8 @@ export default function DashboardSidebar({ userEmail }: SidebarProps) {
 
     const navigation = [
         { name: "Dashboard", href: "/dashboard", icon: "📊" },
-        { name: "Projects", href: "/dashboard/projects", icon: "📁" },
-        { name: "Jobs", href: "/dashboard/jobs", icon: "⚡" },
+        { name: "Connected Sites", href: "/dashboard/projects", icon: "📁" },
+        { name: "Content", href: "/dashboard/jobs", icon: "⚡" },
         { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
     ];
 
@@ -43,8 +43,8 @@ export default function DashboardSidebar({ userEmail }: SidebarProps) {
                             key={item.name}
                             href={item.href}
                             className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                    ? "gradient-primary text-white shadow-lg"
-                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                ? "gradient-primary text-white shadow-lg"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                                 }`}
                         >
                             <span className="text-xl">{item.icon}</span>

@@ -13,14 +13,18 @@ interface BlogPost {
     metaDescription: string;
 }
 
-export async function publishToSanity(config: SanityConfig, post: BlogPost) {
-    const client = createClient({
+export function createSanityClient(config: SanityConfig) {
+    return createClient({
         projectId: config.projectId,
         dataset: config.dataset,
         token: config.token,
-        useCdn: false, // We want fresh data
+        useCdn: false,
         apiVersion: "2024-01-01",
     });
+}
+
+export async function publishToSanity(config: SanityConfig, post: BlogPost) {
+    const client = createSanityClient(config);
 
     // Create the document
     // Note: Transforming Markdown to Portable Text properly requires a parser.

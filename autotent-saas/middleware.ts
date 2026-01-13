@@ -2,6 +2,14 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+    // TEMPORARY DEBUG: Return simple response to check if crash persists
+    return NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    })
+
+    /*
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -36,6 +44,7 @@ export async function updateSession(request: NextRequest) {
     await supabase.auth.getUser()
 
     return response
+    */
 }
 
 export async function middleware(request: NextRequest) {

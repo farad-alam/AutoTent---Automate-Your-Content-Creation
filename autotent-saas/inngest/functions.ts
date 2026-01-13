@@ -36,6 +36,10 @@ export const generateContent = inngest.createFunction(
             });
 
             // 3. Publish to Sanity
+            if (!project.sanity_project_id || !project.sanity_token) {
+                throw new Error("Sanity configuration is missing. Please configure Sanity in Website Settings.");
+            }
+
             const sanityResult = await step.run("publish-sanity", async () => {
                 return await publishToSanity({
                     projectId: project.sanity_project_id,
@@ -46,7 +50,7 @@ export const generateContent = inngest.createFunction(
 
             // 4. Update Job Status
             await step.run("complete-job", async () => {
-                // Use the Sanity Manage URL (works for all projects)
+                // Use the Sanity Manage URL
                 const resultUrl = `https://www.sanity.io/manage/personal/project/${project.sanity_project_id}/desk/${sanityResult._type};${sanityResult._id}`;
 
                 await supabase.from('jobs').update({
@@ -55,6 +59,8 @@ export const generateContent = inngest.createFunction(
                     result_url: resultUrl
                 }).eq('id', jobId);
             });
+
+
 
         } catch (error: any) {
             await step.run("fail-job", async () => {

@@ -6,9 +6,10 @@ create table projects (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users not null,
   name text not null,
-  sanity_project_id text not null,
-  sanity_dataset text not null,
-  sanity_token text not null, -- In a real app, this should be encrypted
+  url text, -- Website URL
+  sanity_project_id text, -- Nullable (configured later)
+  sanity_dataset text, -- Nullable
+  sanity_token text, -- Nullable
   created_at timestamptz default now()
 );
 

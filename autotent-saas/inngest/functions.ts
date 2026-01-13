@@ -6,7 +6,7 @@ import { createServiceClient } from "@/lib/supabase-server"; // Use service clie
 export const generateContent = inngest.createFunction(
     { id: "generate-content", concurrency: 2 },
     { event: "job/created" },
-    async ({ event, step }) => {
+    async ({ event, step }: any) => {
         const { jobId, projectId, scheduledFor } = event.data;
         const supabase = createServiceClient();
 

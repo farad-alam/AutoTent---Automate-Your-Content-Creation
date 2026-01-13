@@ -134,7 +134,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         redirect(`/dashboard/websites/${id}`)
     }
 
-    async function deletePendingJobs(formData: FormData) {
+    async function deletePendingJobs() {
         'use server'
         const { createClient } = await import('@/lib/supabase-server')
         const supabase = await createClient()

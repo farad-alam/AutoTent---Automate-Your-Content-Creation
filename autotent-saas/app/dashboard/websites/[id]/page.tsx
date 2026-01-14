@@ -8,6 +8,7 @@ import { inngest } from '@/inngest/client'
 import DashboardSidebar from '@/components/dashboard-sidebar'
 import DeletePendingJobsButton from '@/components/delete-pending-jobs-button'
 import WebsiteSettings from '@/components/website-settings'
+import ArticleGeneratorForm from '@/components/article-generator-form'
 
 // Types
 type PageProps = {
@@ -209,33 +210,10 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
 
                 {/* Article Generator (Only if connected) */}
                 {isCMSConnected && (
-                    <Card className="mb-8 border-gray-200 dark:border-gray-700">
-                        <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
-                            <CardTitle className="flex items-center gap-2">
-                                <span className="text-2xl">🚀</span>
-                                Generate Article for {website.name}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                            <form action={createJob} className="flex gap-4">
-                                <Input
-                                    name="keyword"
-                                    placeholder="Enter Article Topic / Keyword (e.g. Best Coffee Machines)"
-                                    required
-                                    className="flex-1"
-                                />
-                                <Input
-                                    type="datetime-local"
-                                    name="scheduledFor"
-                                    className="w-auto"
-                                    min={new Date().toISOString().slice(0, 16)}
-                                />
-                                <Button type="submit" className="gradient-primary text-white border-0 px-8">
-                                    Generate
-                                </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
+                    <ArticleGeneratorForm
+                        websiteName={website.name}
+                        createJob={createJob}
+                    />
                 )}
 
                 {/* Articles List */}

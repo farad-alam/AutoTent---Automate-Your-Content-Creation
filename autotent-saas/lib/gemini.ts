@@ -38,8 +38,9 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
 {
   "title": "Engaging, SEO-optimized title (max 60 chars)",
   "metaDescription": "Compelling meta description (max 160 chars)",
-  "slug": "seo-friendly-url-slug",
-  "bodyMarkdown": "Full article in Markdown format with ## H2, ### H3, **bold**, lists, etc."
+  "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
+  "excerpt": "Short summary of the article (20-30 words)",
+  "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`;
 
   // Try multiple model names if one fails
@@ -73,6 +74,19 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
       // Parse JSON
       const content = JSON.parse(cleanedText);
 
+      // Post-processing
+      // 1. Slug: Ensure it matches keyword if possible, or just sanitize the generated one
+      content.slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+      // 2. Body: Remove leading H1/Title if present
+      content.bodyMarkdown = content.bodyMarkdown.replace(/^#\s+.*?\n+/, '').trim();
+
+      // 3. Excerpt: If not generated, extract from body
+      if (!content.excerpt) {
+        const plainText = content.bodyMarkdown.replace(/[#*`]/g, '');
+        content.excerpt = plainText.split(' ').slice(0, 30).join(' ') + '...';
+      }
+
       console.log('✓ AI content generated successfully:', content.title);
       return content;
 
@@ -92,9 +106,8 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
     title: title,
     metaDescription: `Discover everything you need to know about ${keyword}. Expert insights, tips, and comprehensive analysis.`,
     slug: slug,
-    bodyMarkdown: `# ${title}
-
-## Introduction
+    excerpt: `Welcome to our comprehensive guide on ${keyword}. This article covers the essential information you need.`,
+    bodyMarkdown: `## Introduction
 
 Welcome to our comprehensive guide on **${keyword}**. This article covers the essential information you need.
 

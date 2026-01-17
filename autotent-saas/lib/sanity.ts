@@ -1,4 +1,5 @@
 import { createClient } from "@sanity/client";
+import { convertMarkdownToPortableText } from "./markdownToPortableText";
 
 interface SanityConfig {
     projectId: string;
@@ -11,6 +12,9 @@ interface BlogPost {
     slug: string;
     bodyMarkdown: string;
     metaDescription: string;
+    excerpt?: string;
+    authorId?: string; // Sanity Author ID
+    categoryId?: string; // Sanity Category ID (assuming single category for now, or array)
 }
 
 export function createSanityClient(config: SanityConfig) {
@@ -26,34 +30,39 @@ export function createSanityClient(config: SanityConfig) {
 export async function publishToSanity(config: SanityConfig, post: BlogPost) {
     const client = createSanityClient(config);
 
-    // Create the document
-    // Note: Transforming Markdown to Portable Text properly requires a parser.
-    // For simplicity MVP, we might push raw markdown or a simple block.
-    // Ideally use @portabletext/to-portabletext-block
-
-    const doc = {
+    const doc: any = {
         _type: "post",
         title: post.title,
         slug: {
             _type: "slug",
             current: post.slug,
         },
-        // Simple body structure - Users will need a schema that accepts this or we need a converter
-        body: [
-            {
-                _type: 'block',
-                children: [
-                    {
-                        _type: 'span',
-                        text: post.bodyMarkdown // This is raw markdown, ideally needs parsing
-                    }
-                ]
-            }
-        ],
+        // Use the utility to convert markdown to Portable Text
+        body: convertMarkdownToPortableText(post.bodyMarkdown),
+        excerpt: post.excerpt,
         metadata: {
             description: post.metaDescription
         }
     };
+
+    // Add Author if provided
+    if (post.authorId) {
+        doc.author = {
+            _type: 'reference',
+            _ref: post.authorId
+        };
+    }
+
+    // Add Category if provided (Sanity usually uses categories array)
+    if (post.categoryId) {
+        doc.categories = [
+            {
+                _type: 'reference',
+                _key: crypto.randomUUID(),
+                _ref: post.categoryId
+            }
+        ];
+    }
 
     const result = await client.create(doc);
     return result;

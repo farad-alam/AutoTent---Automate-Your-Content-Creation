@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@portabletext/markdown": "^1.1.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@sanity/client": "^7.14.0",
     "@supabase/ssr": "^0.8.0",

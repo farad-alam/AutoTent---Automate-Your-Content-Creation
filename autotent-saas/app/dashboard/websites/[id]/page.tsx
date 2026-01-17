@@ -42,6 +42,19 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
+    // Fetch Authors and Categories
+    const { data: authors } = await supabase
+        .from('sanity_authors')
+        .select('*')
+        .eq('project_id', id)
+        .order('name')
+
+    const { data: categories } = await supabase
+        .from('sanity_categories')
+        .select('*')
+        .eq('project_id', id)
+        .order('title')
+
     // ACTIONS
     async function updateCMS(formData: FormData) {
         'use server'
@@ -75,6 +88,8 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
 
         const scheduledFor = formData.get('scheduledFor') as string
         const keyword = formData.get('keyword') as string
+        const authorId = formData.get('authorId') as string
+        const categoryId = formData.get('categoryId') as string
         const projectId = id // Use URL param ID
 
         const status = scheduledFor ? 'scheduled' : 'pending'
@@ -84,7 +99,9 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
             project_id: projectId,
             keyword,
             status,
-            scheduled_for: scheduledFor || null
+            scheduled_for: scheduledFor || null,
+            sanity_author_id: authorId || null,
+            sanity_category_id: categoryId || null
         }).select().single()
 
         if (error) console.error(error)
@@ -97,7 +114,9 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         jobId: job.id,
                         projectId: projectId,
                         keyword: keyword,
-                        scheduledFor: scheduledFor || null
+                        scheduledFor: scheduledFor || null,
+                        // Note: Inngest function will fetch the job details from DB anyway, 
+                        // so strictly speaking passing IDs here is redundant but harmless.
                     }
                 })
             } catch (inngestError: any) {
@@ -213,6 +232,8 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                     <ArticleGeneratorForm
                         websiteName={website.name}
                         createJob={createJob}
+                        authors={authors || []}
+                        categories={categories || []}
                     />
                 )}
 

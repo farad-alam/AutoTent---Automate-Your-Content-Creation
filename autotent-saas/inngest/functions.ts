@@ -45,7 +45,11 @@ export const generateContent = inngest.createFunction(
                     projectId: project.sanity_project_id,
                     dataset: project.sanity_dataset,
                     token: project.sanity_token
-                }, generatedContent);
+                }, {
+                    ...generatedContent,
+                    authorId: job.sanity_author_id,
+                    categoryId: job.sanity_category_id
+                });
             });
 
             // 4. Update Job Status

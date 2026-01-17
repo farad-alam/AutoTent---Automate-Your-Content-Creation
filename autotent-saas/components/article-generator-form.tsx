@@ -5,12 +5,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+type Author = {
+    id: string
+    name: string
+    sanity_id: string
+}
+
+type Category = {
+    id: string
+    title: string
+    sanity_id: string
+}
+
 type ArticleGeneratorFormProps = {
     websiteName: string
     createJob: (formData: FormData) => Promise<void>
+    authors?: Author[]
+    categories?: Category[]
 }
 
-export default function ArticleGeneratorForm({ websiteName, createJob }: ArticleGeneratorFormProps) {
+export default function ArticleGeneratorForm({ websiteName, createJob, authors = [], categories = [] }: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -53,26 +67,51 @@ export default function ArticleGeneratorForm({ websiteName, createJob }: Article
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-                <form onSubmit={handleSubmit} className="flex gap-4">
-                    <Input
-                        name="keyword"
-                        placeholder="Enter Article Topic / Keyword (e.g. Best Coffee Machines)"
-                        required
-                        className="flex-1"
-                    />
-                    <Input
-                        type="datetime-local"
-                        name="scheduledFor"
-                        className="w-auto"
-                        min={new Date().toISOString().slice(0, 16)}
-                    />
-                    <Button
-                        type="submit"
-                        disabled={isPending}
-                        className="gradient-primary text-white border-0 px-8"
-                    >
-                        {isPending ? 'Generating...' : 'Generate'}
-                    </Button>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <div className="flex gap-4">
+                        <Input
+                            name="keyword"
+                            placeholder="Enter Article Topic / Keyword (e.g. Best Coffee Machines)"
+                            required
+                            className="flex-1"
+                        />
+                        <Input
+                            type="datetime-local"
+                            name="scheduledFor"
+                            className="w-auto"
+                            min={new Date().toISOString().slice(0, 16)}
+                        />
+                    </div>
+
+                    <div className="flex gap-4">
+                        <select
+                            name="authorId"
+                            className="flex-1 h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300"
+                        >
+                            <option value="">Select Author (Optional)</option>
+                            {authors.map(author => (
+                                <option key={author.id} value={author.sanity_id}>{author.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            name="categoryId"
+                            className="flex-1 h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300"
+                        >
+                            <option value="">Select Category (Optional)</option>
+                            {categories.map(category => (
+                                <option key={category.id} value={category.sanity_id}>{category.title}</option>
+                            ))}
+                        </select>
+
+                        <Button
+                            type="submit"
+                            disabled={isPending}
+                            className="gradient-primary text-white border-0 px-8"
+                        >
+                            {isPending ? 'Generating...' : 'Generate'}
+                        </Button>
+                    </div>
                 </form>
             </CardContent>
         </Card>

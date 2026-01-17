@@ -57,9 +57,30 @@ export default function WebsiteSettings({ websiteId, initialConfig, action }: We
                     {isConnected ? 'Edit Sanity Configuration' : '⚠️ Connect Sanity CMS'}
                 </CardTitle>
                 {isConnected && (
-                    <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
-                        <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                                setIsPending(true)
+                                try {
+                                    const { syncSanityMetadata } = await import('@/app/actions/sanity')
+                                    const result = await syncSanityMetadata(websiteId)
+                                    alert(`Synced ${result.counts.authors} authors and ${result.counts.categories} categories!`)
+                                } catch (e: any) {
+                                    alert(`Sync failed: ${e.message}`)
+                                } finally {
+                                    setIsPending(false)
+                                }
+                            }}
+                            disabled={isPending}
+                        >
+                            🔄 Sync Data
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
                 )}
             </CardHeader>
             <CardContent>

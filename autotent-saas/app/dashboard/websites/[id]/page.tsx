@@ -65,12 +65,17 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         const projectId = formData.get('projectId') as string
         const dataset = formData.get('dataset') as string
         const token = formData.get('token') as string
+        const geminiApiKey = formData.get('geminiApiKey') as string
 
-        await supabase.from('projects').update({
+        const updates: any = {
             sanity_project_id: projectId,
             sanity_dataset: dataset,
-            sanity_token: token
-        }).eq('id', id)
+        }
+
+        if (token) updates.sanity_token = token
+        if (geminiApiKey) updates.gemini_api_key = geminiApiKey
+
+        await supabase.from('projects').update(updates).eq('id', id)
 
         redirect(`/dashboard/websites/${id}`)
     }
@@ -225,7 +230,8 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         websiteId={id}
                         initialConfig={{
                             projectId: website.sanity_project_id,
-                            dataset: website.sanity_dataset
+                            dataset: website.sanity_dataset,
+                            geminiApiKey: website.gemini_api_key
                         }}
                         action={updateCMS}
                     />
@@ -233,12 +239,22 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
 
                 {/* Article Generator (Only if connected) */}
                 {isCMSConnected && (
-                    <ArticleGeneratorForm
-                        websiteName={website.name}
-                        createJob={createJob}
-                        authors={authors || []}
-                        categories={categories || []}
-                    />
+                    <>
+                        {!website.gemini_api_key && (
+                            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                    ⚠️ <strong>Gemini API Key Required:</strong> Please add your Gemini API key in settings above before generating content.
+                                </p>
+                            </div>
+                        )}
+                        <ArticleGeneratorForm
+                            websiteName={website.name}
+                            createJob={createJob}
+                            authors={authors || []}
+                            categories={categories || []}
+                            disabled={!website.gemini_api_key}
+                        />
+                    </>
                 )}
 
                 {/* Articles List */}

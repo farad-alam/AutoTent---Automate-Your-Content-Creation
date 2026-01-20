@@ -20,11 +20,12 @@ type Category = {
 type ArticleGeneratorFormProps = {
     websiteName: string
     createJob: (formData: FormData) => Promise<void>
-    authors?: Author[]
-    categories?: Category[]
+    authors: Author[]
+    categories: Category[]
+    disabled?: boolean
 }
 
-export default function ArticleGeneratorForm({ websiteName, createJob, authors = [], categories = [] }: ArticleGeneratorFormProps) {
+export default function ArticleGeneratorForm({ websiteName, createJob, authors = [], categories = [], disabled = false }: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -124,13 +125,14 @@ export default function ArticleGeneratorForm({ websiteName, createJob, authors =
                                 <option key={category.id} value={category.sanity_id}>{category.title}</option>
                             ))}
                         </select>
-
+                    </div>
+                    <div className="flex justify-end">
                         <Button
                             type="submit"
-                            disabled={isPending}
-                            className="gradient-primary text-white border-0 px-8"
+                            disabled={isPending || disabled}
+                            className="gradient-primary text-white border-0"
                         >
-                            {isPending ? 'Generating...' : 'Generate'}
+                            {isPending ? 'Generating...' : 'Generate Article'}
                         </Button>
                     </div>
                 </form>

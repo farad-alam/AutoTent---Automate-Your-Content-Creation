@@ -3,11 +3,19 @@ import { generateBlogContent } from "@/lib/gemini";
 import { publishToSanity } from "@/lib/sanity";
 import { createServiceClient } from "@/lib/supabase-server"; // Use service client for background jobs
 
+// Custom error class for non-retriable errors
+class NonRetriableError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NonRetriableError';
+    }
+}
+
 export const generateContent = inngest.createFunction(
     {
         id: "generate-content",
         concurrency: 2,
-        retries: 0 // Don't retry - rate limits need manual intervention
+        retries: 2 // Retry up to 2 times for transient errors
     },
     { event: "job/created" },
     async ({ event, step }: any) => {
@@ -33,10 +41,15 @@ export const generateContent = inngest.createFunction(
 
         const { job, project } = projectData;
 
+        // Validate Gemini API Key
+        if (!project.gemini_api_key) {
+            throw new Error('Gemini API key is missing. Please add your API key in website settings before generating content.');
+        }
+
         try {
             // 2. Generate Content via Gemini
             let generatedContent = await step.run("generate-ai-content", async () => {
-                return await generateBlogContent(job.keyword);
+                return await generateBlogContent(job.keyword, project.gemini_api_key);
             });
 
             // 2.5 Enrich Content (Images & Videos)
@@ -46,7 +59,8 @@ export const generateContent = inngest.createFunction(
                     return await enrichContent(generatedContent.bodyMarkdown, {
                         includeImages: job.include_images,
                         includeVideos: job.include_videos,
-                        keyword: job.keyword
+                        keyword: job.keyword,
+                        apiKey: project.gemini_api_key
                     });
                 });
             }
@@ -64,8 +78,8 @@ export const generateContent = inngest.createFunction(
                 const { generateImageSearchTerm } = await import('@/lib/gemini');
 
                 // Generate specific visual search term
-                const searchTerm = await step.run("generate-image-term", async () => {
-                    return await generateImageSearchTerm(job.keyword);
+                const searchTerm = await step.run("generate-image-search-term", async () => {
+                    return await generateImageSearchTerm(job.keyword, project.gemini_api_key);
                 });
 
                 const imageUrl = await step.run("fetch-image", async () => {
@@ -121,6 +135,11 @@ export const generateContent = inngest.createFunction(
                     error_message: error.message
                 }).eq('id', jobId);
             });
+
+            // For rate limit errors, don't retry
+            if (error.message.includes('Rate limit') || error.message.includes('429')) {
+                throw new NonRetriableError(error.message);
+            }
 
             throw error;
         }

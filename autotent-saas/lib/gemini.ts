@@ -1,23 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GOOGLE_GEMINI_API_KEY!;
-const genAI = new GoogleGenerativeAI(apiKey);
-
 // Helper for delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Using the simple model name (SDK adds "models/" prefix automatically)
-const getModel = () => {
-  return genAI.getGenerativeModel({
-    model: "gemini-flash-latest", // SDK will construct the full path
-    generationConfig: { responseMimeType: "application/json" }
-  });
-};
-
-const model = getModel();
-
-export async function generateBlogContent(keyword: string) {
+export async function generateBlogContent(keyword: string, apiKey: string) {
   console.log(`Generating AI content for keyword: ${keyword}`);
+
+  // Validate API key
+  if (!apiKey || apiKey.trim() === '') {
+    throw new Error('Gemini API key is required. Please add your API key in website settings.');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   const prompt = `You are an expert SEO content writer.
 Write a comprehensive, engaging blog post about: "${keyword}"
@@ -63,7 +57,16 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
       cleanedText = cleanedText.replace(/\s*```$/g, '');
       cleanedText = cleanedText.trim();
 
-      const content = JSON.parse(cleanedText);
+      let content;
+      try {
+        content = JSON.parse(cleanedText);
+      } catch (parseError: any) {
+        console.error(`JSON parsing failed for ${modelName}:`, parseError.message);
+        console.error(`Raw response (first 500 chars):`, cleanedText.substring(0, 500));
+
+        // Treat JSON parse errors as retryable - the model might succeed on retry
+        throw new Error(`Invalid JSON response from AI: ${parseError.message}`);
+      }
 
       content.slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       content.bodyMarkdown = content.bodyMarkdown.replace(/^#\s+.*?\n+/, '').trim();
@@ -93,14 +96,16 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   // Determine specific error type
   let errorMessage = 'AI content generation failed';
   if (lastError) {
-    if (lastError.message.includes('429') || lastError.message.includes('Too Many Requests')) {
+    if (lastError.message.includes('Invalid JSON response')) {
+      errorMessage = 'AI content generation failed: The AI returned malformed content. Please try again.';
+    } else if (lastError.message.includes('429') || lastError.message.includes('Too Many Requests')) {
       errorMessage = 'AI content generation failed: Rate limit exceeded. Your API key has hit the quota limit. Please wait or upgrade your plan.';
     } else if (lastError.message.includes('404') || lastError.message.includes('Not Found')) {
       errorMessage = 'AI content generation failed: Model not found. Your API key may not have access to this model. Try generating a new API key.';
     } else if (lastError.message.includes('403') || lastError.message.includes('Forbidden')) {
       errorMessage = 'AI content generation failed: Access denied. Check your API key permissions.';
     } else if (lastError.message.includes('401') || lastError.message.includes('Unauthorized')) {
-      errorMessage = 'AI content generation failed: Invalid API key. Please check your GOOGLE_GEMINI_API_KEY.';
+      errorMessage = 'AI content generation failed: Invalid API key. Please check your Gemini API key in website settings.';
     } else {
       errorMessage = `AI content generation failed: ${lastError.message}`;
     }
@@ -109,8 +114,15 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   throw new Error(errorMessage);
 }
 
-export async function generateImageSearchTerm(keyword: string): Promise<string> {
+export async function generateImageSearchTerm(keyword: string, apiKey: string): Promise<string> {
   console.log(`Generating image search term for: ${keyword}`);
+
+  if (!apiKey || apiKey.trim() === '') {
+    console.warn("No API key provided for image search term, using keyword fallback.");
+    return keyword;
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   const prompt = `You are a visual curator.
     Topic: "${keyword}"
@@ -143,10 +155,17 @@ export async function generateImageSearchTerm(keyword: string): Promise<string> 
   return keyword;
 }
 
-export async function generateBatchSearchTerms(headings: string[], mainTopic: string, type: 'image' | 'video'): Promise<Record<string, string>> {
+export async function generateBatchSearchTerms(headings: string[], mainTopic: string, apiKey: string, type: 'image' | 'video'): Promise<Record<string, string>> {
   console.log(`Generating batch ${type} search terms for ${headings.length} headings. Context: ${mainTopic}`);
 
   if (headings.length === 0) return {};
+
+  if (!apiKey || apiKey.trim() === '') {
+    console.warn("No API key provided for batch search terms, returning empty map.");
+    return {};
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   const prompt = `You are a visual curator. 
     Context: The article is about "${mainTopic}".

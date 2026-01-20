@@ -11,12 +11,14 @@ type WebsiteSettingsProps = {
     initialConfig: {
         projectId?: string | null
         dataset?: string | null
+        geminiApiKey?: string | null
     }
     action: (formData: FormData) => Promise<void>
 }
 
 export default function WebsiteSettings({ websiteId, initialConfig, action }: WebsiteSettingsProps) {
     const isConnected = !!initialConfig.projectId
+    const hasGeminiKey = !!initialConfig.geminiApiKey
     const [isEditing, setIsEditing] = useState(!isConnected)
     const [isPending, setIsPending] = useState(false)
 
@@ -120,6 +122,23 @@ export default function WebsiteSettings({ websiteId, initialConfig, action }: We
                             className="bg-white dark:bg-gray-800"
                         />
                         {isConnected && <p className="text-xs text-gray-500">Only enter a new token if you want to update it.</p>}
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                            Gemini API Key
+                            {!hasGeminiKey && <span className="text-xs text-red-500 font-normal">(Required for content generation)</span>}
+                        </label>
+                        <Input
+                            name="geminiApiKey"
+                            type="password"
+                            placeholder={hasGeminiKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Your Gemini API Key"}
+                            required={!hasGeminiKey}
+                            className="bg-white dark:bg-gray-800"
+                        />
+                        <p className="text-xs text-gray-500">
+                            Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Google AI Studio</a>
+                        </p>
                     </div>
 
                     <div className="md:col-span-2 flex justify-end gap-2">

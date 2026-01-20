@@ -6,10 +6,11 @@ type EnrichmentOptions = {
     includeImages: boolean;
     includeVideos: boolean;
     keyword: string; // Context for AI
+    apiKey: string;  // User's Gemini API key
 };
 
 export async function enrichContent(markdown: string, options: EnrichmentOptions): Promise<string> {
-    const { includeImages, includeVideos, keyword } = options;
+    const { includeImages, includeVideos, keyword, apiKey } = options;
 
     if (!includeImages && !includeVideos) return markdown;
 
@@ -102,8 +103,8 @@ export async function enrichContent(markdown: string, options: EnrichmentOptions
     console.log("Video Headings:", videoHeadings);
 
     const [imageTerms, videoTerms] = await Promise.all([
-        imageHeadings.length > 0 ? generateBatchSearchTerms(imageHeadings, keyword, 'image') : Promise.resolve({} as Record<string, string>),
-        videoHeadings.length > 0 ? generateBatchSearchTerms(videoHeadings, keyword, 'video') : Promise.resolve({} as Record<string, string>)
+        imageHeadings.length > 0 ? generateBatchSearchTerms(imageHeadings, keyword, apiKey, 'image') : Promise.resolve({} as Record<string, string>),
+        videoHeadings.length > 0 ? generateBatchSearchTerms(videoHeadings, keyword, apiKey, 'video') : Promise.resolve({} as Record<string, string>)
     ]);
 
     // 5. Fetch Media (Parallel)

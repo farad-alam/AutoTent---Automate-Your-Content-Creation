@@ -83,6 +83,27 @@ export default function ArticleGeneratorForm({ websiteName, createJob, authors =
                         />
                     </div>
 
+                    <div className="flex gap-6 px-1">
+                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="includeImages"
+                                defaultChecked
+                                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600"
+                            />
+                            Include Images
+                        </label>
+                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="includeVideos"
+                                defaultChecked
+                                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600"
+                            />
+                            Include Videos
+                        </label>
+                    </div>
+
                     <div className="flex gap-4">
                         <select
                             name="authorId"

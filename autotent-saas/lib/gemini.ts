@@ -3,20 +3,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = process.env.GOOGLE_GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Using the correct model name for the current SDK version
-// Try models in order of preference
-const getModel = () => {
-  // List of model names to try (newest to oldest)
-  // Prioritizing gemini-flash-latest as it is confirmed working for this account
-  const modelNames = [
-    "gemini-flash-latest",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-pro-latest"
-  ];
+// Helper for delay
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Return the first model (will try during actual generation)
-  return genAI.getGenerativeModel({ model: modelNames[0] });
+// Using the simple model name (SDK adds "models/" prefix automatically)
+const getModel = () => {
+  return genAI.getGenerativeModel({
+    model: "gemini-flash-latest", // SDK will construct the full path
+    generationConfig: { responseMimeType: "application/json" }
+  });
 };
 
 const model = getModel();
@@ -43,18 +38,18 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`;
 
-  // Try multiple model names if one fails
-  const modelNamesToTry = [
-    "gemini-flash-latest",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-pro-latest"
-  ];
+  // STABLE PRODUCTION MODELS
+  const modelNamesToTry = ["gemini-flash-latest"];
+
+  let lastError: any = null;
 
   for (const modelName of modelNamesToTry) {
     try {
       console.log(`Trying model: ${modelName}`);
-      const currentModel = genAI.getGenerativeModel({ model: modelName });
+      const currentModel = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { responseMimeType: "application/json" }
+      });
 
       const result = await currentModel.generateContent(prompt);
       const response = result.response;
@@ -62,26 +57,16 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
 
       console.log(`✓ Model ${modelName} worked! Parsing response...`);
 
-      // Clean up response - remove code blocks if present
       let cleanedText = text.trim();
-
-      // Remove markdown code blocks
       cleanedText = cleanedText.replace(/^```json\s*/g, '');
       cleanedText = cleanedText.replace(/^```\s*/g, '');
       cleanedText = cleanedText.replace(/\s*```$/g, '');
       cleanedText = cleanedText.trim();
 
-      // Parse JSON
       const content = JSON.parse(cleanedText);
 
-      // Post-processing
-      // 1. Slug: Ensure it matches keyword if possible, or just sanitize the generated one
       content.slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-      // 2. Body: Remove leading H1/Title if present
       content.bodyMarkdown = content.bodyMarkdown.replace(/^#\s+.*?\n+/, '').trim();
-
-      // 3. Excerpt: If not generated, extract from body
       if (!content.excerpt) {
         const plainText = content.bodyMarkdown.replace(/[#*`]/g, '');
         content.excerpt = plainText.split(' ').slice(0, 30).join(' ') + '...';
@@ -91,50 +76,118 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
       return content;
 
     } catch (error: any) {
+      lastError = error;
       console.log(`✗ Model ${modelName} failed:`, error.message);
-      // Continue to next model
+
+      if (error.message.includes('429')) {
+        console.log("Rate limited. Waiting 15s before trying next model...");
+        await sleep(15000);
+      }
       continue;
     }
   }
 
-  // If all models fail, use fallback
-  console.error('All Gemini models failed. Using fallback content.');
-  const title = `Complete Guide to ${keyword}`;
-  const slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  // All models failed - throw error with specific details
+  console.error('All Gemini models failed. Throwing error to prevent publishing fallback content.');
 
-  return {
-    title: title,
-    metaDescription: `Discover everything you need to know about ${keyword}. Expert insights, tips, and comprehensive analysis.`,
-    slug: slug,
-    excerpt: `Welcome to our comprehensive guide on ${keyword}. This article covers the essential information you need.`,
-    bodyMarkdown: `## Introduction
+  // Determine specific error type
+  let errorMessage = 'AI content generation failed';
+  if (lastError) {
+    if (lastError.message.includes('429') || lastError.message.includes('Too Many Requests')) {
+      errorMessage = 'AI content generation failed: Rate limit exceeded. Your API key has hit the quota limit. Please wait or upgrade your plan.';
+    } else if (lastError.message.includes('404') || lastError.message.includes('Not Found')) {
+      errorMessage = 'AI content generation failed: Model not found. Your API key may not have access to this model. Try generating a new API key.';
+    } else if (lastError.message.includes('403') || lastError.message.includes('Forbidden')) {
+      errorMessage = 'AI content generation failed: Access denied. Check your API key permissions.';
+    } else if (lastError.message.includes('401') || lastError.message.includes('Unauthorized')) {
+      errorMessage = 'AI content generation failed: Invalid API key. Please check your GOOGLE_GEMINI_API_KEY.';
+    } else {
+      errorMessage = `AI content generation failed: ${lastError.message}`;
+    }
+  }
 
-Welcome to our comprehensive guide on **${keyword}**. This article covers the essential information you need.
+  throw new Error(errorMessage);
+}
 
-## Why ${keyword} Matters
+export async function generateImageSearchTerm(keyword: string): Promise<string> {
+  console.log(`Generating image search term for: ${keyword}`);
 
-${keyword} is an important topic that has gained significant attention. Understanding it can help you make better decisions.
+  const prompt = `You are a visual curator.
+    Topic: "${keyword}"
+    Task: Provide a ONE single, simple, purely visual search term to find a high-quality stock photo on Unsplash.
+    Rules:
+    - NO abstract concepts (e.g. "success", "growth").
+    - NO text on image requests.
+    - Concrete nouns and scenes only (e.g. "modern office desk", "hiking boots on trail", "fresh coffee beans").
+    - Max 3-4 words.
+    - Output strictly the term, nothing else.`;
 
-## Key Takeaways
+  const modelNames = ["gemini-flash-latest"];
 
-- Comprehensive understanding of the subject
-- Practical applications and examples  
-- Expert insights and best practices
-- Step-by-step guidance
+  for (const modelName of modelNames) {
+    try {
+      const currentModel = genAI.getGenerativeModel({ model: modelName });
+      const result = await currentModel.generateContent(prompt);
+      const term = result.response.text().trim().replace(/^["']|["']$/g, '');
 
-## Getting Started
+      console.log(`✓ Image search term (${modelName}): "${term}"`);
+      return term;
+    } catch (error: any) {
+      console.warn(`Failed to generate image search term with ${modelName}:`, error.message);
+      if (error.message.includes('429')) await sleep(5000);
+      continue;
+    }
+  }
 
-Here's how to approach ${keyword}:
+  console.warn("All models failed for image search term, using keyword fallback.");
+  return keyword;
+}
 
-1. Learn the fundamentals
-2. Apply best practices
-3. Avoid common mistakes
-4. Continuously improve
+export async function generateBatchSearchTerms(headings: string[], mainTopic: string, type: 'image' | 'video'): Promise<Record<string, string>> {
+  console.log(`Generating batch ${type} search terms for ${headings.length} headings. Context: ${mainTopic}`);
 
-## Conclusion
+  if (headings.length === 0) return {};
 
-${keyword} is a valuable topic worth exploring. This guide provides you with the foundation to succeed.
+  const prompt = `You are a visual curator. 
+    Context: The article is about "${mainTopic}".
+    Task: For each provided Article Heading, generate a ONE single, simple, purely visual search term to find a high-quality ${type} (stock photo or youtube video).
+    
+    Headings:
+    ${headings.map(h => `- ${h}`).join('\n')}
 
-*Note: This is fallback content generated because Gemini API models are not currently accessible.*`
-  };
+    Rules:
+    - ALWAYS combine the MAIN TOPIC with the HEADING context.
+    - Example: If topic is "Dog Health" and heading is "Training", search for "Dog training", NOT just "Training".
+    - NO abstract concepts.
+    - Concrete nouns and scenes only.
+    - Max 4-5 words per term.
+    - Return valid JSON object where keys are the exact headings provided and values are the search terms.
+    - JSON ONLY. No markdown blocks.`;
+
+  const modelNames = ["gemini-flash-latest"];
+
+  for (const modelName of modelNames) {
+    try {
+      const currentModel = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { responseMimeType: "application/json" }
+      });
+      const result = await currentModel.generateContent(prompt);
+      const text = result.response.text().trim()
+        .replace(/^```json\s*/g, '')
+        .replace(/^```\s*/g, '')
+        .replace(/\s*```$/g, '');
+
+      const terms = JSON.parse(text);
+      console.log(`✓ Batch terms generated with ${modelName}`);
+      return terms;
+    } catch (error: any) {
+      console.warn(`Batch generation failed with ${modelName}:`, error.message);
+      if (error.message.includes('429')) await sleep(10000);
+      continue;
+    }
+  }
+
+  console.warn("All models failed for batch search terms. Returning empty map.");
+  return {};
 }

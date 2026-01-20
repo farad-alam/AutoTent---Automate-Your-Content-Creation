@@ -90,6 +90,8 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         const keyword = formData.get('keyword') as string
         const authorId = formData.get('authorId') as string
         const categoryId = formData.get('categoryId') as string
+        const includeImages = formData.get('includeImages') === 'on'
+        const includeVideos = formData.get('includeVideos') === 'on'
         const projectId = id // Use URL param ID
 
         const status = scheduledFor ? 'scheduled' : 'pending'
@@ -101,7 +103,9 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
             status,
             scheduled_for: scheduledFor || null,
             sanity_author_id: authorId || null,
-            sanity_category_id: categoryId || null
+            sanity_category_id: categoryId || null,
+            include_images: includeImages,
+            include_videos: includeVideos
         }).select().single()
 
         if (error) console.error(error)
@@ -271,6 +275,11 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                                     : job.status
                                                 }
                                             </span>
+                                            {job.status === 'failed' && job.error_message && (
+                                                <div className="mt-1 text-xs text-red-600">
+                                                    {job.error_message}
+                                                </div>
+                                            )}
                                             {job.status === 'failed' && (
                                                 <form action={retryJob} className="inline ml-2">
                                                     <input type="hidden" name="jobId" value={job.id} />

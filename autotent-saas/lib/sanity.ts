@@ -79,13 +79,12 @@ export async function publishToSanity(config: SanityConfig, post: BlogPost) {
         if (!blocks || !Array.isArray(blocks)) return blocks;
 
         const processed = await Promise.all(blocks.map(async (block) => {
-            // Check if block is an image with a URL but no asset
-            if (block._type === 'image' && block.url && !block.asset) {
-                console.log(`Found inline image: ${block.url}`);
+            // CASE 1: Image is a top-level block (rare in this converter, but possible)
+            if (block._type === 'image' && block.src && !block.asset) {
+                console.log(`Found inline image (top-level): ${block.src}`);
                 try {
-                    const assetId = await uploadImageToSanity(config, block.url);
+                    const assetId = await uploadImageToSanity(config, block.src);
                     if (assetId) {
-                        console.log(`Inline image uploaded to Sanity: ${assetId}`);
                         return {
                             _type: 'image',
                             _key: block._key,
@@ -101,9 +100,38 @@ export async function publishToSanity(config: SanityConfig, post: BlogPost) {
                 }
             }
 
-            // Recursively process children
-            if (block.children) {
-                block.children = await processInlineImages(block.children);
+            // CASE 2: Image is inside 'children' (common for standard markdown paragraphs)
+            if (block.children && Array.isArray(block.children)) {
+                // We need to map children, but some might change type from span/image -> block?
+                // Actually, portable text images inside children are problematic for some renderers.
+                // Standard Sanity Image blocks should be top-level.
+                // However, @portabletext/markdown puts them in children if they are part of a paragraph.
+
+                // Let's process children
+                const processedChildren = await Promise.all(block.children.map(async (child: any) => {
+                    if (child._type === 'image' && child.src && !child.asset) {
+                        console.log(`Found inline image (child): ${child.src}`);
+                        try {
+                            const assetId = await uploadImageToSanity(config, child.src);
+                            if (assetId) {
+                                return {
+                                    _type: 'image',
+                                    _key: child._key,
+                                    asset: {
+                                        _type: 'reference',
+                                        _ref: assetId
+                                    },
+                                    alt: child.alt || 'Article Image'
+                                };
+                            }
+                        } catch (e) {
+                            console.error("Failed to process child inline image:", e);
+                        }
+                    }
+                    return child;
+                }));
+
+                block.children = processedChildren;
             }
 
             return block;

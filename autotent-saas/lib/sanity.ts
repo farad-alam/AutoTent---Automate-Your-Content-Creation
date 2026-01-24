@@ -38,8 +38,15 @@ export async function uploadImageToSanity(config: SanityConfig, imageUrl: string
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        let extension = 'jpg';
+        if (contentType.includes('webp')) extension = 'webp';
+        if (contentType.includes('png')) extension = 'png';
+        if (contentType.includes('gif')) extension = 'gif';
+
         const asset = await client.assets.upload('image', buffer, {
-            filename: 'main-image.webp' // Assumption due to query params
+            filename: `image-${Date.now()}.${extension}`,
+            contentType: contentType
         });
 
         return asset._id;
@@ -67,6 +74,50 @@ export async function publishToSanity(config: SanityConfig, post: BlogPost) {
         }
     };
 
+    // Helper to process inline images recursively
+    async function processInlineImages(blocks: any[]): Promise<any[]> {
+        if (!blocks || !Array.isArray(blocks)) return blocks;
+
+        const processed = await Promise.all(blocks.map(async (block) => {
+            // Check if block is an image with a URL but no asset
+            if (block._type === 'image' && block.url && !block.asset) {
+                console.log(`Found inline image: ${block.url}`);
+                try {
+                    const assetId = await uploadImageToSanity(config, block.url);
+                    if (assetId) {
+                        console.log(`Inline image uploaded to Sanity: ${assetId}`);
+                        return {
+                            _type: 'image',
+                            _key: block._key,
+                            asset: {
+                                _type: 'reference',
+                                _ref: assetId
+                            },
+                            alt: block.alt || 'Article Image'
+                        };
+                    }
+                } catch (e) {
+                    console.error("Failed to process inline image:", e);
+                }
+            }
+
+            // Recursively process children
+            if (block.children) {
+                block.children = await processInlineImages(block.children);
+            }
+
+            return block;
+        }));
+
+        return processed;
+    }
+
+    // Process body for inline images
+    if (doc.body) {
+        console.log("Processing inline images in body...");
+        doc.body = await processInlineImages(doc.body);
+    }
+
     // Add Main Image if provided
     if (post.mainImageId) {
         doc.mainImage = {
@@ -77,8 +128,6 @@ export async function publishToSanity(config: SanityConfig, post: BlogPost) {
             }
         };
     }
-
-    // Add Author if provided
 
     // Add Author if provided
     if (post.authorId) {

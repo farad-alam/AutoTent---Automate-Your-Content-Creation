@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createSanityClient } from '@/lib/sanity'
 import DashboardSidebar from '@/components/dashboard-sidebar'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 
 export default async function PreviewPage({ params }: { params: { jobId: string } }) {
     const supabase = await createClient()
@@ -124,11 +125,20 @@ export default async function PreviewPage({ params }: { params: { jobId: string 
 
                         {/* Body Content */}
                         <div className="prose prose-lg max-w-none dark:prose-invert">
-                            {content.bodyMarkdown ? (
-                                <pre className="whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300 leading-relaxed">
-                                    {content.bodyMarkdown}
-                                </pre>
-                            ) : content.body && Array.isArray(content.body) ? (
+                            <ReactMarkdown
+                                components={{
+                                    img: ({ node, ...props }) => (
+                                        <img {...props} className="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 my-8 w-full" />
+                                    ),
+                                    a: ({ node, ...props }) => (
+                                        <a {...props} className="text-purple-600 hover:text-purple-700 underline" target="_blank" rel="noopener noreferrer" />
+                                    )
+                                }}
+                            >
+                                {content.bodyMarkdown || (content.body && typeof content.body === 'string' ? content.body : '')}
+                            </ReactMarkdown>
+
+                            {!content.bodyMarkdown && content.body && Array.isArray(content.body) && (
                                 <div className="space-y-4">
                                     {content.body.map((block: any, idx: number) => (
                                         <div key={idx}>
@@ -140,10 +150,6 @@ export default async function PreviewPage({ params }: { params: { jobId: string 
                                         </div>
                                     ))}
                                 </div>
-                            ) : content.body ? (
-                                <div dangerouslySetInnerHTML={{ __html: content.body }} />
-                            ) : (
-                                <p className="text-gray-500">No content body available</p>
                             )}
                         </div>
 

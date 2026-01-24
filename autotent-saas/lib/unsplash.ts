@@ -24,9 +24,9 @@ export async function searchImage(query: string): Promise<string | null> {
             // w=1200: Reasonable width for blog post header
             // h=630: 1.91:1 aspect ratio (good for social cards)
             // fit=crop: Crop to fit exact dimensions
-            // q=80: 80% quality (good balance)
-            // fm=webp: WebP format for smaller file size
-            return `${rawUrl}?w=1200&h=630&fit=crop&q=80&fm=webp`;
+            // q=75: 75% quality (good balance for storage savings)
+            // fm=webp: WebP format for smaller file size (essential for Sanity storage)
+            return `${rawUrl}?w=1200&h=630&fit=crop&q=75&fm=webp`;
         }
 
         return null;

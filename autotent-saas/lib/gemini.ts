@@ -116,6 +116,342 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
   "excerpt": "Short summary of the article (20-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
+}`,
+    howto: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
+
+Write a 100% original, step-by-step, SEO-optimized HOW-TO article targeting:
+
+Primary keyword: {{PRIMARY KEYWORD}}
+
+SEARCH INTENT (HOW-TO):
+- The reader wants clear, actionable instructions to complete a specific task.
+- Focus on solving the problem quickly, correctly, and confidently.
+- Prioritize practical steps over theory.
+
+TARGET AUDIENCE:
+- Beginners to intermediate users.
+- Assume little to no prior knowledge.
+- Write in a reassuring, easy-to-follow manner.
+
+WRITING STYLE & TONE:
+- Clear, practical, and human.
+- Friendly and encouraging, like a guide walking the reader through each step.
+- Use simple language and direct instructions.
+- Avoid fluff, jargon, and AI-sounding phrases.
+- No robotic intros or generic SEO filler.
+
+KEYWORD STRATEGY (NO STUFFING):
+- Use ONE primary keyword.
+- Naturally include related and semantic keywords.
+- Place the primary keyword organically in:
+  - The first 100 words
+  - One or more relevant H2 subheadings
+- Never force keywords.
+- Write for clarity first, SEO second.
+
+CONTENT QUALITY (E-E-A-T):
+- Demonstrate real experience by explaining why each step matters.
+- Include practical tips, warnings, and common mistakes.
+- Mention tools, materials, or prerequisites when needed.
+- Be honest about limitations, risks, or when something may not work.
+- Avoid shallow or generic instructions.
+
+STRUCTURE & READABILITY:
+- Use clear H2 and H3 headings.
+- Short paragraphs (2–3 lines max).
+- Use numbered steps for the main process.
+- Use bullet points for tips, tools, and warnings.
+- Make the content easy to scan and follow on mobile.
+
+ARTICLE STRUCTURE:
+
+1. SEO Title (H1)
+   - Start with “How to…”
+   - Include the primary keyword naturally.
+   - Promise a clear outcome.
+
+2. Meta Description
+   - 150–160 characters.
+   - Include the primary keyword.
+   - Emphasize ease, speed, or results.
+
+3. Introduction
+   - Briefly describe the problem or task.
+   - Reassure the reader that it’s achievable.
+   - Include the primary keyword naturally within the first 100 words.
+   - Clearly state what the reader will accomplish by the end.
+
+4. Prerequisites / What You’ll Need (if applicable)
+   - Tools, materials, accounts, or conditions required.
+   - Keep it simple and practical.
+
+5. Step-by-Step Instructions (Core Section)
+   - Use numbered steps in logical order.
+   - Explain each step clearly and concisely.
+   - Add small tips or notes under steps when helpful.
+   - Avoid skipping steps or assuming prior knowledge.
+
+6. Common Mistakes & How to Avoid Them
+   - List real-world errors beginners make.
+   - Explain why they happen and how to prevent them.
+
+7. Pro Tips / Best Practices
+   - Optional but valuable.
+   - Share expert-level insights that improve results or save time.
+
+8. Optional Troubleshooting / FAQ
+   - Answer 3–5 common “What if…” or “Why isn’t this working?” questions.
+   - Keep answers short and practical.
+
+9. Conclusion
+   - Summarize the process briefly.
+   - Reinforce confidence.
+   - Encourage the reader to take action or try the steps now.
+
+AVOID:
+- Keyword stuffing
+- Overly technical explanations without context
+- Vague steps like “just optimize it”
+- Repetitive or filler content
+- Mentioning AI tools or disclaimers
+
+FINAL GOAL:
+The article should help the reader successfully complete the task on their first attempt, feel confident following the steps, and be optimized to rank for How-To search intent in Google (2026 standards).
+
+Output Format: JSON (strict JSON only, no markdown code blocks)
+{
+  "title": "Engaging, SEO-optimized title (max 60 chars)",
+  "metaDescription": "Compelling meta description (max 160 chars)",
+  "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
+  "excerpt": "Short summary of the article (20-30 words)",
+  "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
+}`,
+    "commercial": `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
+
+Write a 100% original, SEO-optimized COMMERCIAL INTENT article targeting:
+
+Primary keyword: {{PRIMARY KEYWORD}}
+
+SEARCH INTENT (COMMERCIAL – INVESTIGATION):
+- The reader is considering a specific product, service, or solution.
+- They want to evaluate whether it is right for them before making a purchase.
+- Focus on helping the reader make an informed decision.
+- Do NOT compare with competitors or alternatives.
+
+TARGET AUDIENCE:
+- Buyers who are aware of the solution but cautious.
+- Readers looking for honest, experience-based insights.
+- Write in a balanced, realistic, and trust-building tone.
+
+WRITING STYLE & TONE:
+- Natural, conversational, and confident.
+- Honest and transparent — not salesy.
+- Friendly expert explaining pros, cons, and real-world usage.
+- Avoid hype, exaggeration, and promotional language.
+- No AI-sounding phrases or generic marketing talk.
+
+KEYWORD STRATEGY (NO STUFFING):
+- Use ONE primary keyword.
+- Naturally include related and semantic keywords.
+- Place the primary keyword organically in:
+  - The first 100 words
+  - One or more relevant H2 or H3 subheadings
+- Never force keywords.
+- Prioritize clarity and trust over keyword density.
+
+CONTENT QUALITY (E-E-A-T):
+- Demonstrate real or simulated hands-on experience.
+- Explain how the product/service works in real scenarios.
+- Clearly state who it is best for and who it is NOT for.
+- Mention limitations, drawbacks, or deal-breakers honestly.
+- Avoid thin, generic reviews or surface-level praise.
+
+STRUCTURE & READABILITY:
+- Use clear H2 and H3 headings.
+- Short paragraphs (2–3 lines max).
+- Use bullet points for pros, cons, features, and use cases.
+- Keep language simple and buyer-focused.
+- Optimize for skimmability and mobile reading.
+
+ARTICLE STRUCTURE:
+
+1. SEO Title (H1)
+   - Include the primary keyword.
+   - Make it decision-focused (e.g., “Is it worth it?”, “Honest review”).
+
+2. Meta Description
+   - 150–160 characters.
+   - Include the primary keyword.
+   - Encourage evaluation, not urgency.
+
+3. Introduction
+   - Acknowledge the reader’s hesitation or curiosity.
+   - Clearly state what the article will help them decide.
+   - Include the primary keyword naturally within the first 100 words.
+
+4. What Is {{Product/Service}}?
+   - Brief, clear explanation.
+   - Focus on purpose and main use case.
+   - Avoid generic or marketing-heavy descriptions.
+
+5. Key Features & Benefits
+   - Explain how each feature helps in real life.
+   - Focus on outcomes, not just specs.
+
+6. Real-World Use Cases
+   - Describe practical scenarios where it performs well.
+   - Mention where it may struggle or fall short.
+
+7. Pros and Cons
+   - Honest, balanced bullet list.
+   - Do not exaggerate positives or hide negatives.
+
+8. Who Should Use It (and Who Shouldn’t)
+   - Clearly define ideal users.
+   - Warn users for whom it may not be suitable.
+
+9. Common Questions or Concerns
+   - Address objections or doubts buyers usually have.
+   - Keep answers practical and transparent.
+
+10. Verdict / Final Thoughts
+    - Summarize without pushing a hard sale.
+    - Help the reader decide confidently.
+    - Soft encouragement, no aggressive CTA.
+
+AVOID:
+- Comparisons with competitors
+- “Best” claims without context
+- Overly promotional language
+- Keyword stuffing
+- Mentioning AI tools or disclaimers
+
+FINAL GOAL:
+The article should help a cautious buyer confidently decide whether the product or service is right for them, feel honest and trustworthy, and be optimized to rank for commercial intent searches in Google (2026 standards).
+
+Output Format: JSON (strict JSON only, no markdown code blocks)
+{
+  "title": "Engaging, SEO-optimized title (max 60 chars)",
+  "metaDescription": "Compelling meta description (max 160 chars)",
+  "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
+  "excerpt": "Short summary of the article (20-30 words)",
+  "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
+}`,
+    "comparison": `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
+
+Write a 100% original, SEO-optimized COMPARISON INTENT article targeting:
+
+Primary keyword: {{PRIMARY KEYWORD}}   (e.g., “X vs Y”)
+
+SEARCH INTENT (COMPARISON):
+- The reader is deciding between two specific products or solutions.
+- They want a clear, honest, side-by-side evaluation.
+- The goal is to help them choose the option that best fits their needs.
+
+TARGET AUDIENCE:
+- Buyers who are aware of both options.
+- Readers looking for clarity, not marketing hype.
+- Write in a neutral, decision-focused tone.
+
+WRITING STYLE & TONE:
+- Objective, honest, and practical.
+- Confident but unbiased.
+- Explain trade-offs clearly.
+- Avoid emotional hype, exaggeration, or brand favoritism.
+- No AI-sounding phrases or generic marketing language.
+
+KEYWORD STRATEGY (NO STUFFING):
+- Use ONE primary keyword.
+- Naturally include semantic and related keywords (e.g., “differences,” “which is better,” “pros and cons”).
+- Place the primary keyword organically in:
+  - The first 100 words
+  - The H1 title
+  - One or more relevant H2 subheadings
+- Never force keywords.
+
+CONTENT QUALITY (E-E-A-T):
+- Demonstrate real or simulated hands-on experience with both products.
+- Explain how each performs in real-world scenarios.
+- Highlight strengths AND weaknesses for each option.
+- Be honest about limitations and deal-breakers.
+- Avoid shallow or spec-based comparisons only.
+
+STRUCTURE & READABILITY:
+- Use clear H2 and H3 headings.
+- Short paragraphs (2–3 lines max).
+- Use tables and bullet points where helpful.
+- Optimize for skimmability and mobile readers.
+
+ARTICLE STRUCTURE:
+
+1. SEO Title (H1)
+   - Include both product names.
+   - Format clearly (e.g., “X vs Y: Which One Is Better for [Use Case]?”).
+
+2. Meta Description
+   - 150–160 characters.
+   - Include both product names.
+   - Emphasize decision-making clarity.
+
+3. Introduction
+   - Acknowledge the confusion between choosing X or Y.
+   - State that the article will help the reader decide.
+   - Include the primary keyword naturally within the first 100 words.
+
+4. Quick Comparison Summary (Optional but Recommended)
+   - Brief verdict or overview.
+   - Who should choose X vs who should choose Y.
+
+5. Feature-by-Feature Comparison
+   - Compare key features side by side.
+   - Explain why differences matter in real use.
+   - Avoid spec dumping without context.
+
+6. Performance & Real-World Use
+   - How each product performs in practical scenarios.
+   - Strengths and weaknesses under real conditions.
+
+7. Pros and Cons
+   - Separate bullet lists for X and Y.
+   - Keep them honest and balanced.
+
+8. Pricing & Value (if applicable)
+   - Discuss value for money, not just price.
+   - Avoid hard selling.
+
+9. Which One Should You Choose?
+   - Clear guidance based on:
+     - User type
+     - Budget
+     - Use case
+   - No absolute “best” claim without context.
+
+10. FAQ Section (Optional)
+    - Answer common comparison-related questions.
+    - Keep answers short and practical.
+
+11. Final Verdict
+    - Summarize key differences.
+    - Help the reader make a confident decision.
+    - Soft recommendation, no aggressive CTA.
+
+AVOID:
+- Declaring a universal “winner” without context
+- Brand bias or promotional tone
+- Keyword stuffing
+- Thin or surface-level comparisons
+- Mentioning AI tools or disclaimers
+
+FINAL GOAL:
+The article should clearly explain the differences between X and Y, help the reader choose the right option for their specific needs, and be optimized to rank for comparison intent keywords in Google (2026 standards).
+
+Output Format: JSON (strict JSON only, no markdown code blocks)
+{
+  "title": "Engaging, SEO-optimized title (max 60 chars)",
+  "metaDescription": "Compelling meta description (max 160 chars)",
+  "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
+  "excerpt": "Short summary of the article (20-30 words)",
+  "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`
   };
 

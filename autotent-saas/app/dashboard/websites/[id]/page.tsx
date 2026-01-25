@@ -97,6 +97,8 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         const categoryId = formData.get('categoryId') as string
         const includeImages = formData.get('includeImages') === 'on'
         const includeVideos = formData.get('includeVideos') === 'on'
+        const useGoogleSearchLinks = formData.get('useGoogleSearchLinks') === 'on'
+        const intent = formData.get('intent') as string || 'informational'
         const projectId = id // Use URL param ID
 
         const status = scheduledFor ? 'scheduled' : 'pending'
@@ -106,11 +108,13 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
             project_id: projectId,
             keyword,
             status,
+            intent,
             scheduled_for: scheduledFor || null,
             sanity_author_id: authorId || null,
             sanity_category_id: categoryId || null,
             include_images: includeImages,
-            include_videos: includeVideos
+            include_videos: includeVideos,
+            use_google_search_links: useGoogleSearchLinks
         }).select().single()
 
         if (error) console.error(error)

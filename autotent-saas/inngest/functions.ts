@@ -49,7 +49,7 @@ export const generateContent = inngest.createFunction(
         try {
             // 2. Generate Content via Gemini
             let generatedContent = await step.run("generate-ai-content", async () => {
-                return await generateBlogContent(job.keyword, project.gemini_api_key);
+                return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent);
             });
 
             // 2.5 Enrich Content (Images & Videos)
@@ -60,7 +60,9 @@ export const generateContent = inngest.createFunction(
                         includeImages: job.include_images,
                         includeVideos: job.include_videos,
                         keyword: job.keyword,
-                        apiKey: project.gemini_api_key
+                        apiKey: project.gemini_api_key,
+                        includeGoogleLinks: job.use_google_search_links,
+                        braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY
                     });
                 });
             }

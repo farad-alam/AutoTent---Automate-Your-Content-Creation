@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Helper for delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function generateBlogContent(keyword: string, apiKey: string) {
+export async function generateBlogContent(keyword: string, apiKey: string, intent: string = 'informational') {
   console.log(`Generating AI content for keyword: ${keyword}`);
 
   // Validate API key
@@ -13,15 +13,101 @@ export async function generateBlogContent(keyword: string, apiKey: string) {
 
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  const prompt = `You are an expert SEO content writer.
-Write a comprehensive, engaging blog post about: "${keyword}"
+  // Modular Prompt System
+  const PROMPTS: Record<string, string> = {
+    informational: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
 
-Requirements:
-- Professional tone with valuable insights
-- SEO-optimized with natural keyword usage
-- Well-structured with clear headings
-- 800-1200 words
-- Include practical tips and examples
+Write a 100% original, in-depth, SEO-optimized informational article targeting:
+
+Primary keyword: {{PRIMARY KEYWORD}}
+
+SEARCH INTENT:
+- Identify and match the dominant search intent (informational / how-to / beginner-friendly).
+- Focus on solving the reader’s core problem clearly and completely.
+
+TARGET AUDIENCE:
+- Write for curious beginners and intermediate readers.
+- Assume the reader wants practical, real-world guidance — not theory.
+
+WRITING STYLE & TONE:
+- Use natural, human-like language.
+- Add emotion, curiosity, and light storytelling where appropriate.
+- Write like a real expert explaining something to a friend.
+- Friendly, trustworthy, and confident tone.
+- Avoid fluff, repetition, clichés, and AI-sounding phrases.
+- No robotic intros like “In today’s digital world.”
+
+KEYWORD STRATEGY (NO STUFFING):
+- Use ONE primary keyword.
+- Naturally include relevant semantic and related keywords.
+- Place the primary keyword organically in:
+  - The first 100 words
+  - Relevant H2 and H3 subheadings
+- Never force keywords.
+- Prioritize clarity and context over keyword density.
+
+CONTENT QUALITY (E-E-A-T):
+- Demonstrate real experience with examples, use cases, or scenarios.
+- Explain not just “what” but also “why” and “how.”
+- Mention common mistakes, misconceptions, or limitations where relevant.
+- Provide accurate, helpful, and trustworthy information.
+- Avoid thin, generic, or surface-level explanations.
+
+STRUCTURE & READABILITY:
+- Use clear, logical H2 and H3 headings.
+- Short paragraphs (2–3 lines max).
+- Use bullet points and numbered lists where helpful.
+- Simple, easy-to-scan language.
+- Optimize for both humans and Google.
+
+ARTICLE STRUCTURE:
+
+1. SEO Title (H1)
+   - Include the primary keyword.
+   - Make it compelling and click-worthy.
+
+2. Meta Description
+   - 150–160 characters.
+   - Include the primary keyword.
+   - Encourage curiosity and clicks.
+
+3. Introduction
+   - Start with a relatable problem, curiosity, or real-life scenario.
+   - Include the primary keyword naturally within the first 100 words.
+   - Clearly explain what the reader will learn and why it matters.
+
+4. Main Content Sections
+   - Use H2 and H3 subheadings.
+   - Cover the topic step by step.
+   - Include:
+     - Clear explanations
+     - Practical examples or mini-stories
+     - Common beginner questions
+     - Mistakes to avoid (if applicable)
+
+5. Practical Tips / Key Takeaways
+   - Use bullet points or numbered lists.
+   - Make them actionable and realistic.
+   - Focus on things the reader can apply immediately.
+
+6. Optional FAQ Section
+   - Answer 3–5 common, natural questions related to the topic.
+   - Write in a conversational tone.
+
+7. Conclusion
+   - Summarize naturally without keyword stuffing.
+   - Reinforce clarity and confidence.
+   - End with encouragement, insight, or a practical next step.
+
+AVOID:
+- Keyword stuffing
+- Generic filler content
+- Overly formal or academic tone
+- Repetitive phrasing
+- Mentioning AI, tools, or disclaimers
+
+FINAL GOAL:
+The article should feel written by a real expert, be useful enough to bookmark, satisfy search intent fully, and be optimized to rank on Google in 2026.
 
 Output Format: JSON (strict JSON only, no markdown code blocks)
 {
@@ -30,7 +116,11 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
   "excerpt": "Short summary of the article (20-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
-}`;
+}`
+  };
+
+  const selectedTemplate = PROMPTS[intent] || PROMPTS['informational'];
+  const prompt = selectedTemplate.replace('{{PRIMARY KEYWORD}}', keyword);
 
   // STABLE PRODUCTION MODELS
   const modelNamesToTry = ["gemini-flash-latest"];

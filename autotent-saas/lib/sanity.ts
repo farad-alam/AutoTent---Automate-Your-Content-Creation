@@ -144,6 +144,18 @@ export async function publishToSanity(config: SanityConfig, post: BlogPost) {
     if (doc.body) {
         console.log("Processing inline images in body...");
         doc.body = await processInlineImages(doc.body);
+
+        // Process Links for SEO (Target Blank + Nofollow)
+        doc.body.forEach((block: any) => {
+            if (block.markDefs && Array.isArray(block.markDefs)) {
+                block.markDefs.forEach((def: any) => {
+                    if (def._type === 'link') {
+                        def.blank = true; // Open in new tab
+                        def.rel = "nofollow"; // SEO requirement
+                    }
+                });
+            }
+        });
     }
 
     // Add Main Image if provided

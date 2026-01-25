@@ -7,6 +7,8 @@ type EnrichmentOptions = {
     includeVideos: boolean;
     keyword: string; // Context for AI
     apiKey: string;  // User's Gemini API key
+    includeGoogleLinks?: boolean; // We keep the flag name for DB compatibility
+    braveSearchApiKey?: string;
 };
 
 export async function enrichContent(markdown: string, options: EnrichmentOptions): Promise<string> {
@@ -129,7 +131,16 @@ export async function enrichContent(markdown: string, options: EnrichmentOptions
 
     await Promise.all([...imagePromises, ...videoPromises]);
 
-    // 6. Reassemble
+    // 6. Native Search Links (Decoupled & Paused)
+    // Feature paused by user request. Code stubbed to prevent runtime errors.
+    // To re-enable:
+    // 1. Restore lib/brave-search.ts (or serper.dev implementation)
+    // 2. Implement robust try-catch block here
+    if (options.includeGoogleLinks) {
+        console.log("Authority Links feature is currently paused.");
+    }
+
+    // 7. Reassemble (Existing Logic)
     const enrichedSections = sections.map((section, index) => {
         const match = section.match(/^## (.*?)(\n|$)/);
         if (!match) return section;

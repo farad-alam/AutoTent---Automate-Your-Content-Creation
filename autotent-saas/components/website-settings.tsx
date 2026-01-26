@@ -12,6 +12,10 @@ type WebsiteSettingsProps = {
         projectId?: string | null
         dataset?: string | null
         geminiApiKey?: string | null
+        websiteName?: string | null
+        websiteUrl?: string | null
+        geminiApiKeyLabel?: string | null
+        sanityApiTokenLabel?: string | null
     }
     action: (formData: FormData) => Promise<void>
 }
@@ -92,52 +96,99 @@ export default function WebsiteSettings({ websiteId, initialConfig, action }: We
                     </p>
                 )}
                 <form action={handleSubmit} className="grid gap-4 md:grid-cols-2">
+
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium">Website Name (Project Name)</label>
+                        <Input
+                            name="websiteName"
+                            defaultValue={initialConfig.websiteName || ''}
+                            placeholder="My Awesome Website"
+                            required
+                            className="bg-white dark:bg-gray-800"
+                        />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium">Website URL</label>
+                        <Input
+                            name="websiteUrl"
+                            defaultValue={initialConfig.websiteUrl || ''}
+                            placeholder="https://example.com"
+                            className="bg-white dark:bg-gray-800"
+                        />
+                    </div>
+
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Project ID</label>
+                        <label className="text-sm font-medium">Sanity Project ID</label>
                         <Input
                             name="projectId"
                             defaultValue={initialConfig.projectId || ''}
-                            placeholder="Sanity Project ID"
+                            placeholder="e.g. 8p53q..."
                             required
                             className="bg-white dark:bg-gray-800"
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Dataset</label>
+                        <label className="text-sm font-medium">Sanity Dataset Name</label>
                         <Input
                             name="dataset"
                             defaultValue={initialConfig.dataset || ''}
-                            placeholder="Dataset (e.g. production)"
+                            placeholder="e.g. production"
                             required
                             className="bg-white dark:bg-gray-800"
                         />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium">API Token</label>
-                        <Input
-                            name="token"
-                            type="password"
-                            placeholder={isConnected ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Sanity API Token"}
-                            required={!isConnected}
-                            className="bg-white dark:bg-gray-800"
-                        />
+                        <label className="text-sm font-medium">Sanity API Write Token</label>
+                        <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
+                            <div className="md:col-span-1">
+                                <Input
+                                    name="sanityApiTokenLabel"
+                                    defaultValue={initialConfig.sanityApiTokenLabel || ''}
+                                    placeholder="Label (Optional)"
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Input
+                                    name="token"
+                                    type="password"
+                                    placeholder={isConnected ? "•••••••••••••••• (Leave blank to keep unchanged)" : "sk..."}
+                                    required={!isConnected}
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                        </div>
                         {isConnected && <p className="text-xs text-gray-500">Only enter a new token if you want to update it.</p>}
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
                         <label className="text-sm font-medium flex items-center gap-2">
-                            Gemini API Key
-                            {!hasGeminiKey && <span className="text-xs text-red-500 font-normal">(Required for content generation)</span>}
+                            Google Gemini API Key
+                            {!hasGeminiKey && <span className="text-xs text-red-500 font-normal">(Required)</span>}
                         </label>
-                        <Input
-                            name="geminiApiKey"
-                            type="password"
-                            placeholder={hasGeminiKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Your Gemini API Key"}
-                            required={!hasGeminiKey}
-                            className="bg-white dark:bg-gray-800"
-                        />
+                        <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
+                            <div className="md:col-span-1">
+                                <Input
+                                    name="geminiApiKeyLabel"
+                                    defaultValue={initialConfig.geminiApiKeyLabel || ''}
+                                    placeholder="Label (e.g. Personal Email)"
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Input
+                                    name="geminiApiKey"
+                                    type="password"
+                                    placeholder={hasGeminiKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Your Gemini API Key"}
+                                    required={!hasGeminiKey}
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                        </div>
                         <p className="text-xs text-gray-500">
-                            Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Google AI Studio</a>
+                            Label matches your key to an email/account so you don't forget which one it is.
+                            Get key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Google AI Studio</a>
                         </p>
                     </div>
 

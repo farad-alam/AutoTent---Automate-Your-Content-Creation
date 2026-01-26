@@ -15,6 +15,8 @@ type PageProps = {
     params: Promise<{ id: string }>
 }
 
+import { updateCMS, createJob, retryJob, deletePendingJobs } from '@/app/actions/website-actions'
+
 export default async function WebsiteDetailsPage({ params }: PageProps) {
     // Await params object
     const { id } = await params
@@ -55,134 +57,11 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         .eq('project_id', id)
         .order('title')
 
-    // ACTIONS
-    async function updateCMS(formData: FormData) {
-        'use server'
-        // Need to recreate supabase client in action
-        const { createClient } = await import('@/lib/supabase-server')
-        const supabase = await createClient()
+    // Bind ID to actions
+    const updateCMSAction = updateCMS.bind(null, id)
+    const createJobAction = createJob.bind(null, id)
+    const deletePendingJobsAction = deletePendingJobs.bind(null, id)
 
-        const projectId = formData.get('projectId') as string
-        const dataset = formData.get('dataset') as string
-        const token = formData.get('token') as string
-        const geminiApiKey = formData.get('geminiApiKey') as string
-
-        const updates: any = {
-            sanity_project_id: projectId,
-            sanity_dataset: dataset,
-        }
-
-        if (token) updates.sanity_token = token
-        if (geminiApiKey) updates.gemini_api_key = geminiApiKey
-
-        await supabase.from('projects').update(updates).eq('id', id)
-
-        redirect(`/dashboard/websites/${id}`)
-    }
-
-    async function createJob(formData: FormData) {
-        'use server'
-        // Need to recreate supabase client in action
-        const { createClient } = await import('@/lib/supabase-server')
-        const { inngest } = await import('@/inngest/client')
-        const supabase = await createClient()
-
-        // Re-authenticate user inside action
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const scheduledFor = formData.get('scheduledFor') as string
-        const keyword = formData.get('keyword') as string
-        const authorId = formData.get('authorId') as string
-        const categoryId = formData.get('categoryId') as string
-        const includeImages = formData.get('includeImages') === 'on'
-        const includeVideos = formData.get('includeVideos') === 'on'
-        const useGoogleSearchLinks = formData.get('useGoogleSearchLinks') === 'on'
-        const intent = formData.get('intent') as string || 'informational'
-        const projectId = id // Use URL param ID
-
-        const status = scheduledFor ? 'scheduled' : 'pending'
-
-        const { data: job, error } = await supabase.from('jobs').insert({
-            user_id: user.id,
-            project_id: projectId,
-            keyword,
-            status,
-            intent,
-            scheduled_for: scheduledFor || null,
-            sanity_author_id: authorId || null,
-            sanity_category_id: categoryId || null,
-            include_images: includeImages,
-            include_videos: includeVideos,
-            use_google_search_links: useGoogleSearchLinks
-        }).select().single()
-
-        if (error) console.error(error)
-
-        if (job) {
-            try {
-                await inngest.send({
-                    name: "job/created",
-                    data: {
-                        jobId: job.id,
-                        projectId: projectId,
-                        keyword: keyword,
-                        scheduledFor: scheduledFor || null,
-                        // Note: Inngest function will fetch the job details from DB anyway, 
-                        // so strictly speaking passing IDs here is redundant but harmless.
-                    }
-                })
-            } catch (inngestError: any) {
-                console.error('Inngest trigger failed:', inngestError.message)
-                await supabase.from('jobs').update({
-                    status: 'failed',
-                    error_message: 'Failed to trigger background worker.'
-                }).eq('id', job.id)
-            }
-        }
-        redirect(`/dashboard/websites/${id}`)
-    }
-
-    async function retryJob(formData: FormData) {
-        'use server'
-        const { createClient } = await import('@/lib/supabase-server')
-        const { inngest } = await import('@/inngest/client')
-        const supabase = await createClient()
-
-        const jobId = formData.get('jobId') as string
-        const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).single()
-
-        if (!job) return
-
-        await supabase.from('jobs').update({ status: 'pending', error_message: null }).eq('id', jobId)
-
-        try {
-            await inngest.send({
-                name: "job/created",
-                data: { jobId: job.id, projectId: job.project_id, keyword: job.keyword }
-            })
-        } catch (error) {
-            await supabase.from('jobs').update({ status: 'failed', error_message: 'Retry failed' }).eq('id', jobId)
-        }
-        redirect(`/dashboard/websites/${id}`)
-    }
-
-    async function deletePendingJobs() {
-        'use server'
-        const { createClient } = await import('@/lib/supabase-server')
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (user) {
-            await supabase
-                .from('jobs')
-                .delete()
-                .eq('user_id', user.id)
-                .eq('project_id', id)
-                .eq('status', 'pending')
-        }
-        redirect(`/dashboard/websites/${id}`)
-    }
 
     // Check if CMS is connected
     const isCMSConnected = !!website.sanity_project_id
@@ -235,9 +114,13 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         initialConfig={{
                             projectId: website.sanity_project_id,
                             dataset: website.sanity_dataset,
-                            geminiApiKey: website.gemini_api_key
+                            geminiApiKey: website.gemini_api_key,
+                            websiteName: website.name,
+                            websiteUrl: website.url, // Passed here
+                            geminiApiKeyLabel: website.gemini_api_key_label,
+                            sanityApiTokenLabel: website.sanity_api_token_label
                         }}
-                        action={updateCMS}
+                        action={updateCMSAction}
                     />
                 </div>
 
@@ -253,7 +136,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         )}
                         <ArticleGeneratorForm
                             websiteName={website.name}
-                            createJob={createJob}
+                            createJob={createJobAction}
                             authors={authors || []}
                             categories={categories || []}
                             disabled={!website.gemini_api_key}
@@ -266,7 +149,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
                         <h3 className="font-semibold">Articles for this Website</h3>
                         {jobs?.some(job => job.status === 'pending') && (
-                            <DeletePendingJobsButton action={deletePendingJobs} />
+                            <DeletePendingJobsButton action={deletePendingJobsAction} />
                         )}
                     </div>
 

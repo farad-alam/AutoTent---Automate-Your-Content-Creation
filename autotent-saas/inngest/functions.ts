@@ -62,7 +62,9 @@ export const generateContent = inngest.createFunction(
                         keyword: job.keyword,
                         apiKey: project.gemini_api_key,
                         includeGoogleLinks: job.use_google_search_links,
-                        braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY
+                        braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY,
+                        pexelsApiKey: process.env.PEXELS_API_KEY,
+                        pixabayApiKey: process.env.PIXABAY_API_KEY
                     });
                 });
             }

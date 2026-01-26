@@ -1,6 +1,7 @@
 import { generateBatchSearchTerms } from "./gemini";
 import { searchImage } from "./unsplash";
 import { searchYouTubeVideo } from "./youtube";
+import { searchPexels, searchPixabay } from "./fallback-images";
 
 type EnrichmentOptions = {
     includeImages: boolean;
@@ -9,10 +10,12 @@ type EnrichmentOptions = {
     apiKey: string;  // User's Gemini API key
     includeGoogleLinks?: boolean; // We keep the flag name for DB compatibility
     braveSearchApiKey?: string;
+    pexelsApiKey?: string;
+    pixabayApiKey?: string;
 };
 
 export async function enrichContent(markdown: string, options: EnrichmentOptions): Promise<string> {
-    const { includeImages, includeVideos, keyword, apiKey } = options;
+    const { includeImages, includeVideos, keyword, apiKey, pexelsApiKey, pixabayApiKey } = options;
 
     if (!includeImages && !includeVideos) return markdown;
 
@@ -114,9 +117,40 @@ export async function enrichContent(markdown: string, options: EnrichmentOptions
 
     const imagePromises = imageHeadings.map(async (heading) => {
         const term = imageTerms[heading] || heading;
-        const url = await searchImage(term);
+
+        // --- MULTI-SOURCE FALLBACK STRATEGY ---
+        let url: string | null = null;
+        let sourceUsed = 'Unsplash';
+
+        // 1. Unsplash (Strict Verification)
+        try {
+            console.log(`[Image Search] Trying Unsplash for: "${term}"`);
+            url = await searchImage(term, { verifyKeywords: true });
+        } catch (e) { console.warn("Unsplash error:", e); }
+
+        // 2. Pexels Fallback
+        if (!url && pexelsApiKey) {
+            console.log(`[Image Search] Unsplash failed/verified-fail. Trying Pexels for: "${term}"`);
+            sourceUsed = 'Pexels';
+            try {
+                url = await searchPexels(term, pexelsApiKey);
+            } catch (e) { console.warn("Pexels error:", e); }
+        }
+
+        // 3. Pixabay Fallback
+        if (!url && pixabayApiKey) {
+            console.log(`[Image Search] Pexels failed. Trying Pixabay for: "${term}"`);
+            sourceUsed = 'Pixabay';
+            try {
+                url = await searchPixabay(term, pixabayApiKey);
+            } catch (e) { console.warn("Pixabay error:", e); }
+        }
+
         if (url) {
+            console.log(`[Image Search] Success via ${sourceUsed}: ${url}`);
             mediaResults.set(heading, `\n\n![${term}](${url})\n\n`);
+        } else {
+            console.log(`[Image Search] Failed all sources for: "${term}"`);
         }
     });
 
@@ -132,10 +166,6 @@ export async function enrichContent(markdown: string, options: EnrichmentOptions
     await Promise.all([...imagePromises, ...videoPromises]);
 
     // 6. Native Search Links (Decoupled & Paused)
-    // Feature paused by user request. Code stubbed to prevent runtime errors.
-    // To re-enable:
-    // 1. Restore lib/brave-search.ts (or serper.dev implementation)
-    // 2. Implement robust try-catch block here
     if (options.includeGoogleLinks) {
         console.log("Authority Links feature is currently paused.");
     }

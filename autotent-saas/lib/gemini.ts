@@ -36,6 +36,7 @@ WRITING STYLE & TONE:
 - Friendly, trustworthy, and confident tone.
 - Avoid fluff, repetition, clichés, and AI-sounding phrases.
 - No robotic intros like “In today’s digital world.”
+- Keep sentences short and punchy. Avoid long, complex sentence structures.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -72,6 +73,7 @@ ARTICLE STRUCTURE:
    - Encourage curiosity and clicks.
 
 3. Introduction
+   - Start directly with the content. DO NOT use an 'Introduction' H2 header.
    - Start with a relatable problem, curiosity, or real-life scenario.
    - Include the primary keyword naturally within the first 100 words.
    - Clearly explain what the reader will learn and why it matters.
@@ -93,6 +95,7 @@ ARTICLE STRUCTURE:
 6. Optional FAQ Section
    - Answer 3–5 common, natural questions related to the topic.
    - Write in a conversational tone.
+   - Do NOT use "Q:" or "A:" prefixes.
 
 7. Conclusion
    - Summarize naturally without keyword stuffing.
@@ -139,6 +142,7 @@ WRITING STYLE & TONE:
 - Use simple language and direct instructions.
 - Avoid fluff, jargon, and AI-sounding phrases.
 - No robotic intros or generic SEO filler.
+- Keep sentences short and punchy. Avoid long, complex sentence structures.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -176,6 +180,7 @@ ARTICLE STRUCTURE:
    - Emphasize ease, speed, or results.
 
 3. Introduction
+   - Start directly with the content. DO NOT use an 'Introduction' H2 header.
    - Briefly describe the problem or task.
    - Reassure the reader that it’s achievable.
    - Include the primary keyword naturally within the first 100 words.
@@ -202,6 +207,7 @@ ARTICLE STRUCTURE:
 8. Optional Troubleshooting / FAQ
    - Answer 3–5 common “What if…” or “Why isn’t this working?” questions.
    - Keep answers short and practical.
+   - Do NOT use "Q:" or "A:" prefixes.
 
 9. Conclusion
    - Summarize the process briefly.
@@ -249,6 +255,7 @@ WRITING STYLE & TONE:
 - Friendly expert explaining pros, cons, and real-world usage.
 - Avoid hype, exaggeration, and promotional language.
 - No AI-sounding phrases or generic marketing talk.
+- Keep sentences short and punchy. Avoid long, complex sentence structures.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -285,6 +292,7 @@ ARTICLE STRUCTURE:
    - Encourage evaluation, not urgency.
 
 3. Introduction
+   - Start directly with the content. DO NOT use an 'Introduction' H2 header.
    - Acknowledge the reader’s hesitation or curiosity.
    - Clearly state what the article will help them decide.
    - Include the primary keyword naturally within the first 100 words.
@@ -313,6 +321,7 @@ ARTICLE STRUCTURE:
 9. Common Questions or Concerns
    - Address objections or doubts buyers usually have.
    - Keep answers practical and transparent.
+   - Do NOT use "Q:" or "A:" prefixes.
 
 10. Verdict / Final Thoughts
     - Summarize without pushing a hard sale.
@@ -359,6 +368,7 @@ WRITING STYLE & TONE:
 - Explain trade-offs clearly.
 - Avoid emotional hype, exaggeration, or brand favoritism.
 - No AI-sounding phrases or generic marketing language.
+- Keep sentences short and punchy. Avoid long, complex sentence structures.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -394,6 +404,7 @@ ARTICLE STRUCTURE:
    - Emphasize decision-making clarity.
 
 3. Introduction
+   - Start directly with the content. DO NOT use an 'Introduction' H2 header.
    - Acknowledge the confusion between choosing X or Y.
    - State that the article will help the reader decide.
    - Include the primary keyword naturally within the first 100 words.
@@ -429,6 +440,7 @@ ARTICLE STRUCTURE:
 10. FAQ Section (Optional)
     - Answer common comparison-related questions.
     - Keep answers short and practical.
+    - Do NOT use "Q:" or "A:" prefixes.
 
 11. Final Verdict
     - Summarize key differences.
@@ -458,86 +470,92 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   const selectedTemplate = PROMPTS[intent] || PROMPTS['informational'];
   const prompt = selectedTemplate.replace('{{PRIMARY KEYWORD}}', keyword);
 
-  // STABLE PRODUCTION MODELS
-  const modelNamesToTry = ["gemini-flash-latest"];
-
-  let lastError: any = null;
+  // PRODUCTION MODELS - Main article generation
+  // gemini-flash-latest: Proven working model (auto-updates to latest stable)
+  // gemini-2.5-flash: Fallback (retiring June 2026)
+  // gemini-2.5-flash-lite: Emergency fallback when quota exceeded
+  const modelNamesToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  const maxRetriesPerModel = 2; // Retry each model twice before moving to next
 
   for (const modelName of modelNamesToTry) {
-    try {
-      console.log(`Trying model: ${modelName}`);
-      const currentModel = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: { responseMimeType: "application/json" }
-      });
-
-      const result = await currentModel.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-
-      console.log(`✓ Model ${modelName} worked! Parsing response...`);
-
-      let cleanedText = text.trim();
-      cleanedText = cleanedText.replace(/^```json\s*/g, '');
-      cleanedText = cleanedText.replace(/^```\s*/g, '');
-      cleanedText = cleanedText.replace(/\s*```$/g, '');
-      cleanedText = cleanedText.trim();
-
-      let content;
+    for (let attempt = 1; attempt <= maxRetriesPerModel; attempt++) {
       try {
-        content = JSON.parse(cleanedText);
-      } catch (parseError: any) {
-        console.error(`JSON parsing failed for ${modelName}:`, parseError.message);
-        console.error(`Raw response (first 500 chars):`, cleanedText.substring(0, 500));
+        console.log(`Trying model: ${modelName} (attempt ${attempt}/${maxRetriesPerModel})`);
+        const currentModel = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 8192,
+            temperature: 0.7
+          }
+        });
 
-        // Treat JSON parse errors as retryable - the model might succeed on retry
-        throw new Error(`Invalid JSON response from AI: ${parseError.message}`);
+        const result = await currentModel.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+
+        console.log(`✓ Model ${modelName} worked! Parsing response...`);
+
+        let cleanedText = text.trim();
+
+        // Find the first '{' and the last '}' to handle potential markdown or explanation text outside JSON
+        const firstBrace = cleanedText.indexOf('{');
+        const lastBrace = cleanedText.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+        }
+
+        let content;
+        try {
+          content = JSON.parse(cleanedText);
+        } catch (parseError: any) {
+          console.error(`JSON parsing failed for ${modelName}:`, parseError.message);
+          console.error(`Raw response (first 500 chars):`, cleanedText.substring(0, 500));
+
+          // If parsing fails and we have retries left for this model, throw to retry
+          if (attempt < maxRetriesPerModel) {
+            console.log(`Retrying ${modelName} due to JSON parse error...`);
+            await sleep(2000); // Wait 2s before retry
+            throw new Error(`Invalid JSON response from AI: ${parseError.message}`);
+          }
+
+          // Last attempt - try one more aggressive fix before giving up
+          throw new Error(`Invalid JSON response from AI: ${parseError.message}`);
+        }
+
+        content.slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        content.bodyMarkdown = content.bodyMarkdown.replace(/^#\s+.*?\n+/, '').trim();
+        if (!content.excerpt) {
+          const plainText = content.bodyMarkdown.replace(/[#*`]/g, '');
+          content.excerpt = plainText.split(' ').slice(0, 30).join(' ') + '...';
+        }
+
+        console.log('✓ AI content generated successfully:', content.title);
+        return content;
+
+      } catch (error: any) {
+        console.log(`✗ Model ${modelName} attempt ${attempt} failed:`, error.message);
+
+        if (error.message.includes('429')) {
+          console.log("Rate limited. Waiting 10s before retry...");
+          await sleep(10000);
+        }
+
+        // If this is the last attempt for this model, break to try next model
+        if (attempt === maxRetriesPerModel) {
+          console.log(`All attempts exhausted for ${modelName}, trying next model...`);
+          break;
+        }
+
+        // Otherwise, wait a bit and retry same model
+        await sleep(2000);
       }
-
-      content.slug = keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      content.bodyMarkdown = content.bodyMarkdown.replace(/^#\s+.*?\n+/, '').trim();
-      if (!content.excerpt) {
-        const plainText = content.bodyMarkdown.replace(/[#*`]/g, '');
-        content.excerpt = plainText.split(' ').slice(0, 30).join(' ') + '...';
-      }
-
-      console.log('✓ AI content generated successfully:', content.title);
-      return content;
-
-    } catch (error: any) {
-      lastError = error;
-      console.log(`✗ Model ${modelName} failed:`, error.message);
-
-      if (error.message.includes('429')) {
-        console.log("Rate limited. Waiting 15s before trying next model...");
-        await sleep(15000);
-      }
-      continue;
     }
   }
 
-  // All models failed - throw error with specific details
-  console.error('All Gemini models failed. Throwing error to prevent publishing fallback content.');
-
-  // Determine specific error type
-  let errorMessage = 'AI content generation failed';
-  if (lastError) {
-    if (lastError.message.includes('Invalid JSON response')) {
-      errorMessage = 'AI content generation failed: The AI returned malformed content. Please try again.';
-    } else if (lastError.message.includes('429') || lastError.message.includes('Too Many Requests')) {
-      errorMessage = 'AI content generation failed: Rate limit exceeded. Your API key has hit the quota limit. Please wait or upgrade your plan.';
-    } else if (lastError.message.includes('404') || lastError.message.includes('Not Found')) {
-      errorMessage = 'AI content generation failed: Model not found. Your API key may not have access to this model. Try generating a new API key.';
-    } else if (lastError.message.includes('403') || lastError.message.includes('Forbidden')) {
-      errorMessage = 'AI content generation failed: Access denied. Check your API key permissions.';
-    } else if (lastError.message.includes('401') || lastError.message.includes('Unauthorized')) {
-      errorMessage = 'AI content generation failed: Invalid API key. Please check your Gemini API key in website settings.';
-    } else {
-      errorMessage = `AI content generation failed: ${lastError.message}`;
-    }
-  }
-
-  throw new Error(errorMessage);
+  // All models and retries failed
+  throw new Error('AI content generation failed: All models failed after multiple attempts. Please try again or check your API key.');
 }
 
 export async function generateImageSearchTerm(keyword: string, apiKey: string): Promise<string> {
@@ -560,7 +578,7 @@ export async function generateImageSearchTerm(keyword: string, apiKey: string): 
     - Max 3-4 words.
     - Output strictly the term, nothing else.`;
 
-  const modelNames = ["gemini-flash-latest"];
+  const modelNames = ["gemini-2.5-flash"];
 
   for (const modelName of modelNames) {
     try {
@@ -601,21 +619,26 @@ export async function generateBatchSearchTerms(headings: string[], mainTopic: st
     ${headings.map(h => `- ${h}`).join('\n')}
 
     Rules:
-    - ALWAYS combine the MAIN TOPIC with the HEADING context.
-    - Example: If topic is "Dog Health" and heading is "Training", search for "Dog training", NOT just "Training".
-    - NO abstract concepts.
+    - MANDATORY: You MUST include the Main Topic ("${mainTopic}") in every search term.
+    - Example: If topic is "Cat Health" and heading is "Fishy Smell", search for "Cat smelling bad", NOT "Fish".
+    - Example: If topic is "Dog Training" and heading is "Sit Command", search for "Dog sitting", NOT "Chair".
+    - NO metaphors or idioms. Use literal, descriptive visual terms.
+    - NO text on image requests.
     - Concrete nouns and scenes only.
-    - Max 4-5 words per term.
+    - Max 4-6 words per term.
     - Return valid JSON object where keys are the exact headings provided and values are the search terms.
     - JSON ONLY. No markdown blocks.`;
 
-  const modelNames = ["gemini-flash-latest"];
+  const modelNames = ["gemini-2.5-flash"];
 
   for (const modelName of modelNames) {
     try {
       const currentModel = genAI.getGenerativeModel({
         model: modelName,
-        generationConfig: { responseMimeType: "application/json" }
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192
+        }
       });
       const result = await currentModel.generateContent(prompt);
       const text = result.response.text().trim()

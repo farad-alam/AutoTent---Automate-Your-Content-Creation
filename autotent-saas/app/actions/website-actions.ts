@@ -12,6 +12,8 @@ export async function updateCMS(id: string, formData: FormData) {
     const token = formData.get('token') as string
     const geminiApiKey = formData.get('geminiApiKey') as string
     const geminiApiKeyLabel = formData.get('geminiApiKeyLabel') as string
+    const groqApiKey = formData.get('groqApiKey') as string
+    const groqApiKeyLabel = formData.get('groqApiKeyLabel') as string
     const sanityApiTokenLabel = formData.get('sanityApiTokenLabel') as string
     const websiteName = formData.get('websiteName') as string
     const websiteUrl = formData.get('websiteUrl') as string
@@ -20,6 +22,7 @@ export async function updateCMS(id: string, formData: FormData) {
         sanity_project_id: projectId,
         sanity_dataset: dataset,
         gemini_api_key_label: geminiApiKeyLabel,
+        groq_api_key_label: groqApiKeyLabel,
         sanity_api_token_label: sanityApiTokenLabel,
         name: websiteName,
         url: websiteUrl
@@ -27,6 +30,7 @@ export async function updateCMS(id: string, formData: FormData) {
 
     if (token && token.trim()) updates.sanity_token = token.trim()
     if (geminiApiKey && geminiApiKey.trim()) updates.gemini_api_key = geminiApiKey.trim()
+    if (groqApiKey && groqApiKey.trim()) updates.groq_api_key = groqApiKey.trim()
 
     await supabase.from('projects').update(updates).eq('id', id)
 
@@ -49,6 +53,7 @@ export async function createJob(id: string, formData: FormData) {
     const includeVideos = formData.get('includeVideos') === 'on'
     const useGoogleSearchLinks = formData.get('useGoogleSearchLinks') === 'on'
     const intent = formData.get('intent') as string || 'informational'
+    const aiProvider = formData.get('aiProvider') as string || 'auto'
     const projectId = id
 
     const status = scheduledFor ? 'scheduled' : 'pending'
@@ -59,6 +64,7 @@ export async function createJob(id: string, formData: FormData) {
         keyword,
         status,
         intent,
+        ai_provider: aiProvider,
         scheduled_for: scheduledFor || null,
         sanity_author_id: authorId || null,
         sanity_category_id: categoryId || null,

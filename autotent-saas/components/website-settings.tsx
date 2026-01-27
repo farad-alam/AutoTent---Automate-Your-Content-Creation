@@ -12,9 +12,11 @@ type WebsiteSettingsProps = {
         projectId?: string | null
         dataset?: string | null
         geminiApiKey?: string | null
+        groqApiKey?: string | null
         websiteName?: string | null
         websiteUrl?: string | null
         geminiApiKeyLabel?: string | null
+        groqApiKeyLabel?: string | null
         sanityApiTokenLabel?: string | null
     }
     action: (formData: FormData) => Promise<void>
@@ -23,6 +25,7 @@ type WebsiteSettingsProps = {
 export default function WebsiteSettings({ websiteId, initialConfig, action }: WebsiteSettingsProps) {
     const isConnected = !!initialConfig.projectId
     const hasGeminiKey = !!initialConfig.geminiApiKey
+    const hasGroqKey = !!initialConfig.groqApiKey
     const [isEditing, setIsEditing] = useState(!isConnected)
     const [isPending, setIsPending] = useState(false)
 
@@ -189,6 +192,35 @@ export default function WebsiteSettings({ websiteId, initialConfig, action }: We
                         <p className="text-xs text-gray-500">
                             Label matches your key to an email/account so you don't forget which one it is.
                             Get key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Google AI Studio</a>
+                        </p>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                            Groq API Key (Fallback)
+                            {!hasGeminiKey && !hasGroqKey && <span className="text-xs text-yellow-600 font-normal">(Optional - fallback if Gemini fails)</span>}
+                            {hasGroqKey && <span className="text-xs text-green-600 font-normal">✓ Configured</span>}
+                        </label>
+                        <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
+                            <div className="md:col-span-1">
+                                <Input
+                                    name="groqApiKeyLabel"
+                                    defaultValue={initialConfig.groqApiKeyLabel || ''}
+                                    placeholder="Label (e.g. Personal Email)"
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Input
+                                    name="groqApiKey"
+                                    type="password"
+                                    placeholder={hasGroqKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Your Groq API Key (Optional)"}
+                                    className="bg-white dark:bg-gray-800"
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            Groq provides fast, free AI inference. Get your API key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Groq Console</a>
                         </p>
                     </div>
 

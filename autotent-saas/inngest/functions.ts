@@ -14,7 +14,7 @@ class NonRetriableError extends Error {
 export const generateContent = inngest.createFunction(
     {
         id: "generate-content",
-        concurrency: 2,
+        concurrency: 1, // Reduced to 1 to respect Groq Free Tier TPM limits (esp. with DeepSeek 70B)
         retries: 2 // Retry up to 2 times for transient errors
     },
     { event: "job/created" },
@@ -41,15 +41,86 @@ export const generateContent = inngest.createFunction(
 
         const { job, project } = projectData;
 
-        // Validate Gemini API Key
-        if (!project.gemini_api_key) {
-            throw new Error('Gemini API key is missing. Please add your API key in website settings before generating content.');
-        }
-
         try {
-            // 2. Generate Content via Gemini
+            // 2. Generate Content via AI (using provider selected at job creation)
             let generatedContent = await step.run("generate-ai-content", async () => {
-                return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent);
+                // Read ai_provider from JOB (not project)
+                // This ensures scheduled jobs use the provider selected at scheduling time
+                const selectedProvider = job.ai_provider || 'auto'
+
+                // Special handling for explicit provider choices (gemini or groq)
+                if (selectedProvider === 'gemini') {
+                    if (!project.gemini_api_key) {
+                        throw new Error('Gemini API key required but not configured. Please add your Gemini API key in website settings.')
+                    }
+                    console.log('Using Gemini (user selected)')
+                    return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent)
+                }
+
+                if (selectedProvider === 'groq') {
+                    if (!project.groq_api_key && !process.env.GROQ_API_KEY) {
+                        throw new Error('Groq API key required but not configured. Please add your Groq API key in website settings.')
+                    }
+                    console.log('Using Groq (user selected)')
+                    const { generateGroqArticle: genGroq } = await import('@/lib/groq')
+                    const groqResult = await genGroq(job.keyword, project.groq_api_key, job.intent)
+                    return {
+                        title: groqResult.title,
+                        bodyMarkdown: groqResult.body,
+                        excerpt: groqResult.excerpt,
+                        metaDescription: groqResult.metaDescription,
+                        focusKeyword: groqResult.focusKeyword,
+                        slug: groqResult.slug,
+                    }
+                }
+
+                // Auto mode: intelligent fallback logic
+                // Try Gemini first if API key is available
+                if (project.gemini_api_key) {
+                    try {
+                        return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent);
+                    } catch (geminiError: any) {
+                        console.error("Gemini generation failed:", geminiError);
+
+                        // If Gemini fails, try Groq as fallback
+                        if (project.groq_api_key || process.env.GROQ_API_KEY) {
+                            console.log("Attempting Groq fallback...");
+                            const { generateGroqArticle } = await import('@/lib/groq');
+                            const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent);
+
+                            return {
+                                title: groqContent.title,
+                                bodyMarkdown: groqContent.body,
+                                excerpt: groqContent.excerpt,
+                                metaDescription: groqContent.metaDescription,
+                                focusKeyword: groqContent.focusKeyword,
+                                slug: groqContent.slug,
+                            };
+                        }
+
+                        // No fallback available, rethrow
+                        throw geminiError;
+                    }
+                }
+
+                // If no Gemini key, try Groq directly
+                if (project.groq_api_key || process.env.GROQ_API_KEY) {
+                    console.log("Using Groq as primary AI provider...");
+                    const { generateGroqArticle } = await import('@/lib/groq');
+                    const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent);
+
+                    return {
+                        title: groqContent.title,
+                        bodyMarkdown: groqContent.body,
+                        excerpt: groqContent.excerpt,
+                        metaDescription: groqContent.metaDescription,
+                        focusKeyword: groqContent.focusKeyword,
+                        slug: groqContent.slug,
+                    };
+                }
+
+                // No API keys available
+                throw new Error('No AI API keys configured. Please add either a Gemini or Groq API key in website settings.');
             });
 
             // 2.5 Enrich Content (Images & Videos)
@@ -77,7 +148,7 @@ export const generateContent = inngest.createFunction(
             // 3. (Optional) Fetch and Upload Image
             let mainImageId: string | undefined;
             try {
-                const { searchImage } = await import('@/lib/unsplash');
+                const { findBestImage } = await import('@/lib/image-finder');
                 const { uploadImageToSanity } = await import('@/lib/sanity');
                 const { generateImageSearchTerm } = await import('@/lib/gemini');
 
@@ -87,7 +158,13 @@ export const generateContent = inngest.createFunction(
                 });
 
                 const imageUrl = await step.run("fetch-image", async () => {
-                    return await searchImage(searchTerm);
+                    return await findBestImage(searchTerm, {
+                        checkUnsplash: true,
+                        checkPexels: !!process.env.PEXELS_API_KEY,
+                        checkPixabay: !!process.env.PIXABAY_API_KEY,
+                        pexelsApiKey: process.env.PEXELS_API_KEY,
+                        pixabayApiKey: process.env.PIXABAY_API_KEY
+                    });
                 });
 
                 if (imageUrl) {

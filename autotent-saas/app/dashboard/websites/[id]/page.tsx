@@ -115,9 +115,11 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                             projectId: website.sanity_project_id,
                             dataset: website.sanity_dataset,
                             geminiApiKey: website.gemini_api_key,
+                            groqApiKey: website.groq_api_key,
                             websiteName: website.name,
                             websiteUrl: website.url, // Passed here
                             geminiApiKeyLabel: website.gemini_api_key_label,
+                            groqApiKeyLabel: website.groq_api_key_label,
                             sanityApiTokenLabel: website.sanity_api_token_label
                         }}
                         action={updateCMSAction}
@@ -127,10 +129,11 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                 {/* Article Generator (Only if connected) */}
                 {isCMSConnected && (
                     <>
-                        {!website.gemini_api_key && (
+                        {!website.gemini_api_key && !website.groq_api_key && (
                             <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                    ⚠️ <strong>Gemini API Key Required:</strong> Please add your Gemini API key in settings above before generating content.
+                                    ⚠ <strong>No AI API Keys Configured</strong><br />
+                                    Please add at least one AI API key (Gemini or Groq) in website settings above to generate content.
                                 </p>
                             </div>
                         )}
@@ -139,7 +142,9 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                             createJob={createJobAction}
                             authors={authors || []}
                             categories={categories || []}
-                            disabled={!website.gemini_api_key}
+                            preferredProvider={website.preferred_ai_provider || 'auto'}
+                            hasGeminiKey={!!website.gemini_api_key}
+                            hasGroqKey={!!website.groq_api_key}
                         />
                     </>
                 )}

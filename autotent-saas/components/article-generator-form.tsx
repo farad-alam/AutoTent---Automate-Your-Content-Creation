@@ -23,10 +23,23 @@ type ArticleGeneratorFormProps = {
     authors: Author[]
     categories: Category[]
     disabled?: boolean
+    preferredProvider?: string
+    hasGeminiKey?: boolean
+    hasGroqKey?: boolean
 }
 
-export default function ArticleGeneratorForm({ websiteName, createJob, authors = [], categories = [], disabled = false }: ArticleGeneratorFormProps) {
+export default function ArticleGeneratorForm({
+    websiteName,
+    createJob,
+    authors = [],
+    categories = [],
+    disabled = false,
+    preferredProvider = 'auto',
+    hasGeminiKey = false,
+    hasGroqKey = false
+}: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
+    const [selectedProvider, setSelectedProvider] = useState(preferredProvider)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -145,10 +158,52 @@ export default function ArticleGeneratorForm({ websiteName, createJob, authors =
                             ))}
                         </select>
                     </div>
+
+                    {/* AI Provider Selector */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">AI Provider</label>
+                        <select
+                            name="aiProvider"
+                            value={selectedProvider}
+                            onChange={(e) => setSelectedProvider(e.target.value)}
+                            className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300"
+                        >
+                            <option value="auto">🔄 Auto (Intelligent Fallback)</option>
+                            <option value="gemini" disabled={!hasGeminiKey}>
+                                {hasGeminiKey ? '✓' : '⚠'} Gemini {hasGeminiKey ? '(Configured)' : '(API Key Required)'}
+                            </option>
+                            <option value="groq" disabled={!hasGroqKey}>
+                                {hasGroqKey ? '✓' : '⚠'} Groq {hasGroqKey ? '(Configured)' : '(API Key Required)'}
+                            </option>
+                        </select>
+
+                        {/* Validation Warnings */}
+                        {selectedProvider === 'gemini' && !hasGeminiKey && (
+                            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
+                                ⚠ <strong>Gemini API key required.</strong> Please add your Gemini API key in website settings above before generating content.
+                            </div>
+                        )}
+                        {selectedProvider === 'groq' && !hasGroqKey && (
+                            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
+                                ⚠ <strong>Groq API key required.</strong> Please add your Groq API key in website settings above before generating content.
+                            </div>
+                        )}
+                        {selectedProvider === 'auto' && (
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-700 dark:text-blue-400">
+                                ℹ <strong>Auto mode:</strong> Will try Gemini first{hasGeminiKey && ', then fall back to Groq if needed'}{!hasGeminiKey && !hasGroqKey && ', but you need at least one API key configured'}.
+                            </div>
+                        )}
+                    </div>
                     <div className="flex justify-end">
                         <Button
                             type="submit"
-                            disabled={isPending || disabled}
+                            disabled={
+                                isPending ||
+                                disabled ||
+                                (selectedProvider === 'gemini' && !hasGeminiKey) ||
+                                (selectedProvider === 'groq' && !hasGroqKey) ||
+                                (selectedProvider === 'auto' && !hasGeminiKey && !hasGroqKey)
+                            }
                             className="gradient-primary text-white border-0"
                         >
                             {isPending ? 'Generating...' : 'Generate Article'}

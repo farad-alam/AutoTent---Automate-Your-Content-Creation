@@ -1,7 +1,6 @@
 import { generateBatchSearchTerms } from "./gemini";
-import { searchImage } from "./unsplash";
 import { searchYouTubeVideo } from "./youtube";
-import { searchPexels, searchPixabay } from "./fallback-images";
+import { findBestImage } from "./image-finder";
 
 type EnrichmentOptions = {
     includeImages: boolean;
@@ -118,36 +117,18 @@ export async function enrichContent(markdown: string, options: EnrichmentOptions
     const imagePromises = imageHeadings.map(async (heading) => {
         const term = imageTerms[heading] || heading;
 
-        // --- MULTI-SOURCE FALLBACK STRATEGY ---
-        let url: string | null = null;
-        let sourceUsed = 'Unsplash';
-
-        // 1. Unsplash (Strict Verification)
-        try {
-            console.log(`[Image Search] Trying Unsplash for: "${term}"`);
-            url = await searchImage(term, { verifyKeywords: true });
-        } catch (e) { console.warn("Unsplash error:", e); }
-
-        // 2. Pexels Fallback
-        if (!url && pexelsApiKey) {
-            console.log(`[Image Search] Unsplash failed/verified-fail. Trying Pexels for: "${term}"`);
-            sourceUsed = 'Pexels';
-            try {
-                url = await searchPexels(term, pexelsApiKey);
-            } catch (e) { console.warn("Pexels error:", e); }
-        }
-
-        // 3. Pixabay Fallback
-        if (!url && pixabayApiKey) {
-            console.log(`[Image Search] Pexels failed. Trying Pixabay for: "${term}"`);
-            sourceUsed = 'Pixabay';
-            try {
-                url = await searchPixabay(term, pixabayApiKey);
-            } catch (e) { console.warn("Pixabay error:", e); }
-        }
+        // Use shared finder logic
+        const url = await findBestImage(term, {
+            checkUnsplash: true,
+            checkPexels: !!pexelsApiKey,
+            checkPixabay: !!pixabayApiKey,
+            verifyKeywords: true,
+            pexelsApiKey,
+            pixabayApiKey
+        });
 
         if (url) {
-            console.log(`[Image Search] Success via ${sourceUsed}: ${url}`);
+            console.log(`[Image Search] Success: ${url}`);
             mediaResults.set(heading, `\n\n![${term}](${url})\n\n`);
         } else {
             console.log(`[Image Search] Failed all sources for: "${term}"`);

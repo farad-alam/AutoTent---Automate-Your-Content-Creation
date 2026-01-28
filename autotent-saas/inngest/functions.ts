@@ -42,6 +42,24 @@ export const generateContent = inngest.createFunction(
         const { job, project } = projectData;
 
         try {
+            // 1.5 Research Topic (Tavily)
+            const sources = await step.run("research-topic", async () => {
+                const { getDomainWhitelist } = await import('@/lib/niche-detector');
+                const { searchTavily } = await import('@/lib/tavily');
+
+                // 🔍 AI Niche Detection: Get authority domains for this specific keyword
+                const domains = await getDomainWhitelist(job.keyword);
+
+                // 🔍 Search Tavily using ONLY those trusted domains
+                const results = await searchTavily(job.keyword, domains);
+
+                if (results.length > 0) {
+                    return "Here are some verified sources to use for citations:\n" +
+                        results.map(s => `- [${s.title}](${s.url})`).join('\n');
+                }
+                return "";
+            });
+
             // 2. Generate Content via AI (using provider selected at job creation)
             let generatedContent = await step.run("generate-ai-content", async () => {
                 // Read ai_provider from JOB (not project)
@@ -54,7 +72,8 @@ export const generateContent = inngest.createFunction(
                         throw new Error('Gemini API key required but not configured. Please add your Gemini API key in website settings.')
                     }
                     console.log('Using Gemini (user selected)')
-                    return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent)
+                    // Pass sources to Gemini generator
+                    return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent, sources)
                 }
 
                 if (selectedProvider === 'groq') {
@@ -63,7 +82,8 @@ export const generateContent = inngest.createFunction(
                     }
                     console.log('Using Groq (user selected)')
                     const { generateGroqArticle: genGroq } = await import('@/lib/groq')
-                    const groqResult = await genGroq(job.keyword, project.groq_api_key, job.intent)
+                    // Pass sources to Groq generator
+                    const groqResult = await genGroq(job.keyword, project.groq_api_key, job.intent, sources)
                     return {
                         title: groqResult.title,
                         bodyMarkdown: groqResult.body,
@@ -78,7 +98,7 @@ export const generateContent = inngest.createFunction(
                 // Try Gemini first if API key is available
                 if (project.gemini_api_key) {
                     try {
-                        return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent);
+                        return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent, sources);
                     } catch (geminiError: any) {
                         console.error("Gemini generation failed:", geminiError);
 
@@ -86,7 +106,7 @@ export const generateContent = inngest.createFunction(
                         if (project.groq_api_key || process.env.GROQ_API_KEY) {
                             console.log("Attempting Groq fallback...");
                             const { generateGroqArticle } = await import('@/lib/groq');
-                            const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent);
+                            const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent, sources);
 
                             return {
                                 title: groqContent.title,
@@ -107,7 +127,7 @@ export const generateContent = inngest.createFunction(
                 if (project.groq_api_key || process.env.GROQ_API_KEY) {
                     console.log("Using Groq as primary AI provider...");
                     const { generateGroqArticle } = await import('@/lib/groq');
-                    const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent);
+                    const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent, sources);
 
                     return {
                         title: groqContent.title,

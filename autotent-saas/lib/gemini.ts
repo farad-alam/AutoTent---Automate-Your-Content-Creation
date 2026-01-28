@@ -5,7 +5,7 @@ import { generateGroqContent } from './groq';
 // Helper for delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function generateBlogContent(keyword: string, apiKey: string, intent: string = 'informational') {
+export async function generateBlogContent(keyword: string, apiKey: string, intent: string = 'informational', sources: string = "") {
   console.log(`Generating AI content for keyword: ${keyword}`);
 
   // Validate API key
@@ -16,7 +16,7 @@ export async function generateBlogContent(keyword: string, apiKey: string, inten
   const genAI = new GoogleGenerativeAI(apiKey);
 
   // Use shared prompt system (same as Groq for consistency)
-  const prompt = getPromptForIntent(intent, keyword);
+  const prompt = getPromptForIntent(intent, keyword, sources);
 
 
   // PRODUCTION MODELS - Main article generation

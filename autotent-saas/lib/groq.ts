@@ -65,7 +65,8 @@ export async function generateGroqContent(
 export async function generateGroqArticle(
     topic: string,
     apiKey?: string,
-    intent: string = 'informational'
+    intent: string = 'informational',
+    sources: string = ""
 ): Promise<{
     title: string
     body: string
@@ -75,7 +76,7 @@ export async function generateGroqArticle(
     slug: string
 }> {
     // Use the same intent-based prompt system as Gemini
-    const prompt = getPromptForIntent(intent, topic)
+    const prompt = getPromptForIntent(intent, topic, sources)
 
     const response = await generateGroqContent(prompt, apiKey)
 

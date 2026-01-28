@@ -4,7 +4,7 @@
  */
 
 export const CONTENT_PROMPTS: Record<string, string> = {
-    informational: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
+   informational: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
 
 Write a 100% original, in-depth, SEO-optimized informational article targeting:
 
@@ -14,8 +14,30 @@ SEARCH INTENT:
 - Identify and match the dominant search intent (informational / how-to / beginner-friendly).
 - Focus on solving the reader's core problem clearly and completely.
 
+OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
+- Include 2-3 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs):
+
+{{SOURCES}}
+
+LINK PLACEMENT RULES:
+- Place at least 50% of links in the FIRST 30-40% of the article (early credibility signal).
+- Link immediately after making a factual claim, statistic, or scientific statement.
+- Do NOT place links in the conclusion section.
+
+ANCHOR TEXT STANDARDS:
+- Branded anchors (preferred): "According to [Source Name]..." or "Data from [Organization]..."
+- Partial-match: "a 2025 study on [topic]" or "research published by [Source]"
+- Natural phrases: "learn more in this analysis" or "full report available here"
+- ❌ AVOID: "click here", exact-match SEO spam, naked URLs
+
+CITATION CONTEXT RULE:
+- Every outbound link MUST be preceded by 1-2 sentences of context.
+- Explain WHO the source is and WHY they are credible.
+- Example: "The American Kennel Club (AKC), the largest purebred dog registry in the US, recommends [guidelines](URL)..."
+
 LENGTH REQUIREMENT:
-- The article MUST be at least 2000 words long.
+- The article MUST be at least 1500 words long.
 - Cover the topic comprehensively with deep detail.
 
 TARGET AUDIENCE:
@@ -30,6 +52,7 @@ WRITING STYLE & TONE:
 - Avoid fluff, repetition, clichés, and AI-sounding phrases.
 - No robotic intros like "In today's digital world."
 - Keep sentences short and punchy. Avoid long, complex sentence structures.
+- PARAGRAPH LENGTH: Strictly 2-3 lines max. No walls of text. This is critical for mobile readability.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -115,7 +138,7 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
-    howto: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
+   howto: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience.
 
 Write a 100% original, step-by-step, SEO-optimized HOW-TO article targeting:
 
@@ -125,6 +148,25 @@ SEARCH INTENT (HOW-TO):
 - The reader wants clear, actionable instructions to complete a specific task.
 - Focus on solving the problem quickly, correctly, and confidently.
 - Prioritize practical steps over theory.
+
+OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
+- Include 3-5 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs):
+
+{{SOURCES}}
+
+LINK PLACEMENT RULES:
+- Place at least 50% of links in the FIRST 30-40% of the article (early credibility signal).
+- Link immediately after making a factual claim or citing a specific method/technique.
+- Do NOT place links in the conclusion section.
+
+ANCHOR TEXT STANDARDS:
+- Branded: "According to [Expert/Organization]..."
+- Contextual: "research from [Source]" or "guidelines published by [Authority]"
+- ❌ AVOID: "click here", exact-match spam, generic anchors
+
+CITATION CONTEXT RULE:
+- Every link needs 1-2 sentences explaining WHO the source is and WHY it's credible.
 
 LENGTH REQUIREMENT:
 - The article MUST be at least 2000 words long.
@@ -142,6 +184,7 @@ WRITING STYLE & TONE:
 - Avoid fluff, jargon, and AI-sounding phrases.
 - No robotic intros or generic SEO filler.
 - Keep sentences short and punchy. Avoid long, complex sentence structures.
+- PARAGRAPH LENGTH: Strictly 2-3 lines max. No walls of text. This is critical for mobile readability.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword.
@@ -229,7 +272,7 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
-    commercial: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience in writing honest, helpful product reviews.
+   commercial: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience in writing honest, helpful product reviews.
 
 Write a 100% original, in-depth, SEO-optimized product review targeting:
 
@@ -239,6 +282,25 @@ SEARCH INTENT (COMMERCIAL):
 - The reader is actively researching a specific product before making a purchase decision.
 - Focus on providing honest, balanced, and useful insights to help them decide.
 - Build trust through real-world observations, not just specs or sales talk.
+
+OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
+- Include 3-5 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs):
+
+{{SOURCES}}
+
+LINK PLACEMENT RULES:
+- Place at least 50% of links in the FIRST 30-40% of the article.
+- Link when citing product specs, expert opinions, or comparative data.
+- Do NOT place links in the conclusion section.
+
+ANCHOR TEXT STANDARDS:
+- Branded: "According to [Brand/Publication]..."
+- Descriptive: "official [Product Name] specifications" or "review by [Expert]"
+- ❌ AVOID: Affiliate-style spam, "click here", generic phrases
+
+CITATION CONTEXT RULE:
+- Every link needs context explaining the source's credibility.
 
 LENGTH REQUIREMENT:
 - The article MUST be at least 2000 words long.
@@ -255,6 +317,7 @@ WRITING STYLE & TONE:
 - Use natural, human language.
 - Avoid fluff, jargon, and AI-sounding phrases.
 - Keep sentences short and punchy. Avoid long, complex sentence structures.
+- PARAGRAPH LENGTH: Strictly 2-3 lines max. No walls of text. This is critical for mobile readability.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword (the product name or specific review query).
@@ -354,7 +417,7 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
-    comparison: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience in writing honest comparison articles.
+   comparison: `You are an expert niche blogger and SEO content writer with real-world, hands-on experience in writing honest comparison articles.
 
 Write a 100% original, in-depth, SEO-optimized comparison article targeting:
 
@@ -364,6 +427,25 @@ SEARCH INTENT (COMPARISON):
 - The reader is deciding between two (or more) products, services, or options.
 - Focus on helping them understand the key differences and make the right choice for their specific needs.
 - Provide balanced, honest, and actionable comparisons.
+
+OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
+- Include 3-5 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs):
+
+{{SOURCES}}
+
+LINK PLACEMENT RULES:
+- Place at least 50% of links in the FIRST 30-40% of the article.
+- Link when citing comparative data, expert opinions, or official specs.
+- Do NOT place links in the conclusion section.
+
+ANCHOR TEXT STANDARDS:
+- Branded: "According to [Source]..." or "Data from [Organization]..."
+- Descriptive: "comparison by [Publication]" or "analysis from [Expert]"
+- ❌ AVOID: "click here", exact-match spam, generic anchors
+
+CITATION CONTEXT RULE:
+- Every link needs context explaining the source's authority.
 
 LENGTH REQUIREMENT:
 - The article MUST be at least 2000 words long.
@@ -380,6 +462,7 @@ WRITING STYLE & TONE:
 - Friendly but professional tone.
 - Avoid fluff, jargon, and AI-sounding phrases.
 - Keep sentences short and punchy. Avoid long, complex sentence structures.
+- PARAGRAPH LENGTH: Strictly 2-3 lines max. No walls of text. This is critical for mobile readability.
 
 KEYWORD STRATEGY (NO STUFFING):
 - Use ONE primary keyword (e.g., "X vs Y").
@@ -482,9 +565,20 @@ Output Format: JSON (strict JSON only, no markdown code blocks)
  * Get the appropriate prompt template for the given intent
  * @param intent Article intent
  * @param keyword Primary keyword to insert into template
+ * @param sources Optional markdown-formatted list of sources
  * @returns Formatted prompt ready to send to AI
  */
-export function getPromptForIntent(intent: string, keyword: string): string {
-    const selectedTemplate = CONTENT_PROMPTS[intent] || CONTENT_PROMPTS['informational'];
-    return selectedTemplate.replace('{{PRIMARY KEYWORD}}', keyword);
+export function getPromptForIntent(intent: string, keyword: string, sources: string = ""): string {
+   const selectedTemplate = CONTENT_PROMPTS[intent] || CONTENT_PROMPTS['informational'];
+   let prompt = selectedTemplate.replace('{{PRIMARY KEYWORD}}', keyword);
+
+   // Inject sources or remove the placeholder if none provided
+   if (sources && sources.trim().length > 0) {
+      prompt = prompt.replace('{{SOURCES}}', sources);
+   } else {
+      // If no sources, replace with a generic instruction to use internal knowledge
+      prompt = prompt.replace('{{SOURCES}}', "your own internal knowledge base");
+   }
+
+   return prompt;
 }

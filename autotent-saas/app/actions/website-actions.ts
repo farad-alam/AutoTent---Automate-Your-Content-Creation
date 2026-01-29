@@ -52,6 +52,8 @@ export async function createJob(id: string, formData: FormData) {
     const includeImages = formData.get('includeImages') === 'on'
     const includeVideos = formData.get('includeVideos') === 'on'
     const useGoogleSearchLinks = formData.get('useGoogleSearchLinks') === 'on'
+    const includeInternalLinks = formData.get('includeInternalLinks') === 'on'
+    const internalLinkDensity = formData.get('internalLinkDensity') as string || 'medium'
     const intent = formData.get('intent') as string || 'informational'
     const aiProvider = formData.get('aiProvider') as string || 'auto'
     const projectId = id
@@ -70,7 +72,9 @@ export async function createJob(id: string, formData: FormData) {
         sanity_category_id: categoryId || null,
         include_images: includeImages,
         include_videos: includeVideos,
-        use_google_search_links: useGoogleSearchLinks
+        use_google_search_links: useGoogleSearchLinks,
+        include_internal_links: includeInternalLinks,
+        internal_link_density: internalLinkDensity
     }).select().single()
 
     if (error) console.error(error)

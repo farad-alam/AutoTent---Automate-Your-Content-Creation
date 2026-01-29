@@ -19,11 +19,11 @@ export async function generateBlogContent(keyword: string, apiKey: string, inten
   const prompt = getPromptForIntent(intent, keyword, sources);
 
 
-  // PRODUCTION MODELS - Main article generation
-  // gemini-flash-latest: Proven working model (auto-updates to latest stable)
-  // gemini-2.5-flash: Fallback (retiring June 2026)
-  // gemini-2.5-flash-lite: Emergency fallback when quota exceeded
-  const modelNamesToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  // PRODUCTION MODELS - Main  // Model fallback order: fastest/lightest first, then more capable models
+  // gemini-2.5-flash-lite: Fastest, lowest quota usage (try first)
+  // gemini-2.5-flash: Balanced speed and quality
+  // gemini-flash-latest: Most capable, auto-updates to latest stable (last resort)
+  const modelNamesToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
   const maxRetriesPerModel = 2; // Retry each model twice before moving to next
 
   for (const modelName of modelNamesToTry) {
@@ -124,7 +124,7 @@ export async function generateImageSearchTerm(keyword: string, apiKey: string): 
   // 1. Try Gemini if API key is provided
   if (apiKey && apiKey.trim() !== '') {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelNames = ["gemini-2.5-flash"];
+    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
 
     for (const modelName of modelNames) {
       try {
@@ -187,7 +187,7 @@ export async function generateBatchSearchTerms(headings: string[], mainTopic: st
   // 1. Try Gemini if API key is provided
   if (apiKey && apiKey.trim() !== '') {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelNames = ["gemini-2.5-flash"];
+    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
 
     for (const modelName of modelNames) {
       try {

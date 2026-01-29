@@ -31,6 +31,32 @@ export function convertMarkdownToPortableText(markdownString: string): PortableT
                     newItem.children = processBlocks(newItem.children);
                 }
 
+                // Clean up link marks for INTERNAL links (starting with /)
+                // The @portabletext/markdown library sometimes adds 'blank' and 'rel' fields
+                // which are not defined in Sanity schema for internal links
+                if (newItem.marks && Array.isArray(newItem.marks)) {
+                    newItem.marks = newItem.marks.map((mark: any) => {
+                        if (mark._type === 'link' && mark.href && mark.href.startsWith('/')) {
+                            // This is an internal link - strip unsupported attributes
+                            const { blank, rel, ...cleanMark } = mark;
+                            return cleanMark;
+                        }
+                        return mark;
+                    });
+                }
+
+                // Also check if this item itself has markDefs that need cleaning
+                if (newItem.markDefs && Array.isArray(newItem.markDefs)) {
+                    newItem.markDefs = newItem.markDefs.map((def: any) => {
+                        if (def._type === 'link' && def.href && def.href.startsWith('/')) {
+                            // This is an internal link - strip unsupported attributes
+                            const { blank, rel, ...cleanDef } = def;
+                            return cleanDef;
+                        }
+                        return def;
+                    });
+                }
+
                 return newItem;
             });
     };

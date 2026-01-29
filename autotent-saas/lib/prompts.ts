@@ -582,3 +582,32 @@ export function getPromptForIntent(intent: string, keyword: string, sources: str
 
    return prompt;
 }
+
+export const INTERNAL_LINKING_PROMPT = `
+You are an expert SEO editor. I will provide you with an article draft and a list of related articles ("Candidates") from the same website.
+Your task is to identify the best opportunities to insert internal links to these candidates.
+
+RULES:
+1. Select up to {{TARGET_LINK_COUNT}} insertion points.
+2. Prioritize placing links in the FIRST 40% of the article.
+3. Links must be contextually relevant.
+4. Do NOT place links in headings or the main title.
+5. Do NOT place links in the "Conclusion" section.
+6. Create natural anchor text. AVOID "read this", "click here", or exact-match keyword stuffing. Use descriptive phrases.
+   Example: Instead of "Click here for [Dog Training]", use "our guide on [effective dog training techniques]".
+
+CANDIDATES:
+{{CANDIDATES_LIST}}
+
+ARTICLE CONTENT:
+{{ARTICLE_CONTENT}}
+
+OUTPUT JSON ONLY:
+[
+  {
+    "targetArticleSlug": "slug-from-candidates",
+    "originalSnippet": "unique 5-10 word string from text to replace",
+    "rewrittenSnippet": "text with markdown link applied e.g. 'can use [link text](/slug) to improve'"
+  }
+]
+`;

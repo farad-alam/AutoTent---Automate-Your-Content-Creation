@@ -40,6 +40,7 @@ export default function ArticleGeneratorForm({
 }: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
     const [selectedProvider, setSelectedProvider] = useState(preferredProvider)
+    const [showInternalLinking, setShowInternalLinking] = useState(false)
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -159,6 +160,40 @@ export default function ArticleGeneratorForm({
                         </select>
                     </div>
 
+                    {/* Internal Linking Options */}
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-md p-4 bg-gray-50/50 dark:bg-gray-900/50">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    name="includeInternalLinks"
+                                    checked={showInternalLinking}
+                                    onChange={(e) => setShowInternalLinking(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600"
+                                />
+                                Include Internal Links (Same Website)
+                            </label>
+                        </div>
+
+                        {showInternalLinking && (
+                            <div className="mt-2 pl-6">
+                                <label className="text-xs text-gray-500 block mb-1">Link Density</label>
+                                <select
+                                    name="internalLinkDensity"
+                                    className="h-9 w-full max-w-[200px] rounded-md border border-gray-200 bg-white px-3 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300"
+                                    defaultValue="medium"
+                                >
+                                    <option value="low">Low (2-3 links)</option>
+                                    <option value="medium">Medium (3-5 links)</option>
+                                    <option value="high">High (5-7 links)</option>
+                                </select>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Automatically finds relevant articles from this project to link to.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
                     {/* AI Provider Selector */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">AI Provider</label>
@@ -211,6 +246,6 @@ export default function ArticleGeneratorForm({
                     </div>
                 </form>
             </CardContent>
-        </Card>
+        </Card >
     )
 }

@@ -9,6 +9,7 @@ import DashboardSidebar from '@/components/dashboard-sidebar'
 import DeletePendingJobsButton from '@/components/delete-pending-jobs-button'
 import WebsiteSettings from '@/components/website-settings'
 import ArticleGeneratorForm from '@/components/article-generator-form'
+import SyncSanityButton from '@/components/sync-sanity-button'
 
 // Types
 type PageProps = {

@@ -160,6 +160,39 @@ export const generateContent = inngest.createFunction(
                 });
             }
 
+            // 2.6 Add Internal Links
+            if (job.include_internal_links) {
+                generatedContent.bodyMarkdown = await step.run("add-internal-links", async () => {
+                    const { findLinkableArticles, generateInternalLinks } = await import('@/lib/internal-linker');
+
+                    console.log('Starting internal linking...');
+
+                    // Find related articles
+                    const linkableArticles = await findLinkableArticles(
+                        projectId,
+                        job.keyword,
+                        generatedContent.excerpt || '',
+                        10
+                    );
+
+                    console.log(`Found ${linkableArticles.length} linkable articles`);
+
+                    if (linkableArticles.length === 0) {
+                        console.log('No existing articles found to link to. Skipping internal linking.');
+                        return generatedContent.bodyMarkdown;
+                    }
+
+                    // Inject links
+                    return await generateInternalLinks(
+                        generatedContent.bodyMarkdown,
+                        linkableArticles,
+                        job.keyword,
+                        project.gemini_api_key,
+                        job.internal_link_density as 'low' | 'medium' | 'high'
+                    );
+                });
+            }
+
             // 3. Publish to Sanity
             if (!project.sanity_project_id || !project.sanity_token) {
                 throw new Error("Sanity configuration is missing. Please configure Sanity in Website Settings.");
@@ -225,6 +258,30 @@ export const generateContent = inngest.createFunction(
                     result_title: generatedContent.title,
                     result_url: resultUrl
                 }).eq('id', jobId);
+            });
+
+            // 5.5 Store Article Metadata for Future Linking
+            await step.run("store-article-metadata", async () => {
+                const wordCount = generatedContent.bodyMarkdown.split(/\s+/).length;
+
+                console.log('Storing article metadata for internal linking...');
+
+                const { error } = await supabase.from('articles_metadata').insert({
+                    project_id: projectId,
+                    sanity_document_id: sanityResult._id,
+                    title: generatedContent.title,
+                    slug: generatedContent.slug,
+                    excerpt: generatedContent.excerpt,
+                    focus_keyword: generatedContent.focusKeyword,
+                    word_count: wordCount,
+                    published_at: new Date().toISOString()
+                });
+
+                if (error) {
+                    console.error('Failed to store article metadata:', error);
+                } else {
+                    console.log('Article metadata stored successfully');
+                }
             });
 
 

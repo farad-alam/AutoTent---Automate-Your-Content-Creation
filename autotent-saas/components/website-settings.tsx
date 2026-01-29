@@ -86,6 +86,31 @@ export default function WebsiteSettings({ websiteId, initialConfig, action }: We
                         >
                             🔄 Sync Data
                         </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                                setIsPending(true)
+                                try {
+                                    const { syncExistingPosts } = await import('@/app/actions/sync-actions')
+                                    const result = await syncExistingPosts(websiteId)
+                                    if (result.success) {
+                                        alert(result.count === 0
+                                            ? '✅ All posts already synced!'
+                                            : `✅ Synced ${result.count} posts!`)
+                                    } else {
+                                        alert(`❌ Error: ${result.error}`)
+                                    }
+                                } catch (e: any) {
+                                    alert(`Sync failed: ${e.message}`)
+                                } finally {
+                                    setIsPending(false)
+                                }
+                            }}
+                            disabled={isPending}
+                        >
+                            📚 Sync Posts
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
                             <X className="w-4 h-4" />
                         </Button>

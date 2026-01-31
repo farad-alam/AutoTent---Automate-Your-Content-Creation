@@ -17,7 +17,10 @@ type PageProps = {
     params: Promise<{ id: string }>
 }
 
-import { updateCMS, createJob, retryJob, deletePendingJobs } from '@/app/actions/website-actions'
+import { updateCMS, createJob, retryJob, deletePendingJobs, updateJob } from '@/app/actions/website-actions'
+import EditJobDialog from '@/components/edit-job-dialog'
+
+export const dynamic = 'force-dynamic'
 
 export default async function WebsiteDetailsPage({ params }: PageProps) {
     // Await params object
@@ -63,6 +66,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
     const updateCMSAction = updateCMS.bind(null, id)
     const createJobAction = createJob.bind(null, id)
     const deletePendingJobsAction = deletePendingJobs.bind(null, id)
+    const updateJobAction = updateJob.bind(null, id)
 
 
     // Check if CMS is connected
@@ -204,21 +208,34 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {job.model_used ? (
+                                            {job.model_used || job.preferred_model ? (
                                                 <span className="px-2 py-1 text-xs font-mono bg-blue-50 text-blue-700 rounded border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                                    {job.model_used}
+                                                    {job.model_used || job.preferred_model}
+                                                </span>
+                                            ) : (job.status === 'scheduled' || job.status === 'pending' || job.status === 'processing') ? (
+                                                <span className="px-2 py-1 text-xs font-mono bg-gray-50 text-gray-600 rounded border border-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                                                    Auto
                                                 </span>
                                             ) : '-'}
                                         </td>
                                         <td className="px-6 py-4">
-                                            {job.status === 'completed' ? (
+                                            {job.status === 'completed' && (
                                                 <Link
                                                     href={`/dashboard/preview/${job.id}`}
                                                     className="text-sm font-medium text-purple-600 hover:text-purple-700"
                                                 >
                                                     View Content →
                                                 </Link>
-                                            ) : '-'}
+                                            )}
+                                            {job.status === 'scheduled' && (
+                                                <EditJobDialog
+                                                    job={job}
+                                                    websiteId={id}
+                                                    authors={authors || []}
+                                                    categories={categories || []}
+                                                    updateJob={updateJobAction}
+                                                />
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
                                             {new Date(job.created_at).toLocaleDateString()}

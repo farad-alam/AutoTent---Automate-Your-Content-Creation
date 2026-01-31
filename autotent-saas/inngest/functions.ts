@@ -15,7 +15,10 @@ export const generateContent = inngest.createFunction(
     {
         id: "generate-content",
         concurrency: 1, // Reduced to 1 to respect Groq Free Tier TPM limits (esp. with DeepSeek 70B)
-        retries: 2 // Retry up to 2 times for transient errors
+        retries: 2, // Retry up to 2 times for transient errors
+        cancelOn: [
+            { event: "job/cancelled", match: "data.jobId" }
+        ]
     },
     { event: "job/created" },
     async ({ event, step }: any) => {

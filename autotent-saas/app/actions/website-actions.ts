@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase-server'
+import { createClient, createServiceClient } from '@/lib/supabase-server'
 import { inngest } from '@/inngest/client'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 export async function updateCMS(id: string, formData: FormData) {
     const supabase = await createClient()
@@ -141,5 +142,93 @@ export async function deletePendingJobs(id: string) {
             .eq('project_id', id)
             .eq('status', 'pending')
     }
+    redirect(`/dashboard/websites/${id}`)
+}
+
+export async function updateJob(id: string, jobId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    // Re-authenticate user
+    const { data: { user } = {} } = await supabase.auth.getUser()
+    if (!user) return
+
+    // 1. Fetch current job to verify status and ownership
+    const { data: currentJob } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (!currentJob) {
+        throw new Error("Job not found or access denied")
+    }
+
+    if (currentJob.status !== 'scheduled' && currentJob.status !== 'failed') {
+        throw new Error("Only scheduled or failed jobs can be edited")
+    }
+
+    // 2. Extract and Validate Form Data
+    const scheduledFor = formData.get('scheduledFor') as string
+    const keyword = formData.get('keyword') as string
+    const authorId = formData.get('authorId') as string
+    const categoryId = formData.get('categoryId') as string
+    // const includeImages = formData.get('includeImages') === 'on' 
+    const preferredModel = formData.get('preferredModel') as string || null
+
+    if (scheduledFor) {
+        const scheduleDate = new Date(scheduledFor)
+        if (scheduleDate < new Date()) {
+            throw new Error("Scheduled time must be in the future")
+        }
+    }
+
+    const updates: any = {
+        keyword,
+        sanity_author_id: authorId || null,
+        sanity_category_id: categoryId || null,
+        preferred_model: preferredModel,
+        status: 'scheduled'
+    }
+
+    if (scheduledFor) {
+        updates.scheduled_for = scheduledFor
+    }
+
+    // 3. Update Database (using service client to bypass RLS)
+    const serviceClient = createServiceClient()
+    const { error } = await serviceClient
+        .from('jobs')
+        .update(updates)
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+
+    if (error) {
+        throw new Error(`Failed to update job: ${error.message}`)
+    }
+
+    // 4. Handle Inngest Rescheduling
+    try {
+        // Cancel the previous run
+        await inngest.send({
+            name: "job/cancelled",
+            data: { jobId: jobId }
+        })
+
+        // Schedule the new run
+        await inngest.send({
+            name: "job/created",
+            data: {
+                jobId: jobId,
+                projectId: currentJob.project_id,
+                keyword: keyword,
+                scheduledFor: scheduledFor || null
+            }
+        })
+    } catch (inngestError: any) {
+        console.error("Failed to reschedule job in Inngest:", inngestError)
+    }
+
+    revalidatePath(`/dashboard/websites/${id}`)
     redirect(`/dashboard/websites/${id}`)
 }

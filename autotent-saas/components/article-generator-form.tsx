@@ -7,6 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { AVAILABLE_MODELS } from '@/lib/gemini'
+import * as React from "react"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 type Author = {
     id: string
@@ -44,9 +54,13 @@ export default function ArticleGeneratorForm({
     preferredModel = null
 }: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
-    const [selectedProvider, setSelectedProvider] = useState(preferredProvider)
+    const [selectedProvider, setSelectedProvider] = useState(preferredProvider || 'auto')
+    const [selectedModel, setSelectedModel] = useState<string>(preferredModel || 'auto')
     const [showInternalLinking, setShowInternalLinking] = useState(false)
-    const [selectedModel, setSelectedModel] = useState(preferredModel || 'auto')
+    const [date, setDate] = useState<Date>()
+    const [hour, setHour] = useState("12")
+    const [minute, setMinute] = useState("00")
+    const [period, setPeriod] = useState<"AM" | "PM">("PM")
     const [userTier, setUserTier] = useState<'free' | 'pro'>('free')
 
     // Load tier from localStorage on mount
@@ -67,6 +81,22 @@ export default function ArticleGeneratorForm({
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
+
+        // Validate Date & Time
+        if (date) {
+            let h = parseInt(hour)
+            if (period === 'PM' && h !== 12) h += 12
+            if (period === 'AM' && h === 12) h = 0
+
+            const scheduledDateTime = new Date(date)
+            scheduledDateTime.setHours(h, parseInt(minute), 0, 0)
+
+            if (scheduledDateTime < new Date()) {
+                alert("Scheduled time must be in the future.")
+                return
+            }
+        }
+
         setIsPending(true)
 
         try {
@@ -113,11 +143,77 @@ export default function ArticleGeneratorForm({
                             required
                             className="flex-1"
                         />
-                        <Input
-                            type="datetime-local"
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[180px] justify-start text-left font-normal pl-3",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                    type="button"
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(date, "PPP") : <span>Schedule</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={setDate}
+                                    initialFocus
+                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        <div className="flex gap-1 items-center">
+                            <Select value={hour} onValueChange={setHour}>
+                                <SelectTrigger className="w-[70px]">
+                                    <SelectValue placeholder="HH" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                                        <SelectItem key={h} value={h.toString()}>
+                                            {h.toString().padStart(2, '0')}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <span className="text-gray-400">:</span>
+                            <Select value={minute} onValueChange={setMinute}>
+                                <SelectTrigger className="w-[70px]">
+                                    <SelectValue placeholder="MM" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                                        <SelectItem key={m} value={m.toString().padStart(2, '0')}>
+                                            {m.toString().padStart(2, '0')}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={period} onValueChange={(val: "AM" | "PM") => setPeriod(val)}>
+                                <SelectTrigger className="w-[70px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="AM">AM</SelectItem>
+                                    <SelectItem value="PM">PM</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <input
+                            type="hidden"
                             name="scheduledFor"
-                            className="w-auto"
-                            min={new Date().toISOString().slice(0, 16)}
+                            value={date ? (() => {
+                                let h = parseInt(hour)
+                                if (period === 'PM' && h !== 12) h += 12
+                                if (period === 'AM' && h === 12) h = 0
+                                return `${format(date, 'yyyy-MM-dd')}T${h.toString().padStart(2, '0')}:${minute}:00`
+                            })() : ''}
                         />
                     </div>
 
@@ -297,6 +393,8 @@ export default function ArticleGeneratorForm({
                             </div>
                         )}
                     </div>
+
+
                     <div className="flex justify-end">
                         <Button
                             type="submit"

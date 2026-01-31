@@ -72,8 +72,14 @@ export const generateContent = inngest.createFunction(
                         throw new Error('Gemini API key required but not configured. Please add your Gemini API key in website settings.')
                     }
                     console.log('Using Gemini (user selected)')
-                    // Pass sources to Gemini generator
-                    return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent, sources)
+                    // Pass sources and preferred model to Gemini generator
+                    return await generateBlogContent(
+                        job.keyword,
+                        project.gemini_api_key,
+                        job.intent,
+                        sources,
+                        job.preferred_model || undefined  // Read from job record
+                    )
                 }
 
                 if (selectedProvider === 'groq') {
@@ -98,7 +104,13 @@ export const generateContent = inngest.createFunction(
                 // Try Gemini first if API key is available
                 if (project.gemini_api_key) {
                     try {
-                        return await generateBlogContent(job.keyword, project.gemini_api_key, job.intent, sources);
+                        return await generateBlogContent(
+                            job.keyword,
+                            project.gemini_api_key,
+                            job.intent,
+                            sources,
+                            job.preferred_model || undefined  // Read from job record
+                        );
                     } catch (geminiError: any) {
                         console.error("Gemini generation failed:", geminiError);
 

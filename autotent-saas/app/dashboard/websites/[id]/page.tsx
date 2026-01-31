@@ -10,6 +10,7 @@ import DeletePendingJobsButton from '@/components/delete-pending-jobs-button'
 import WebsiteSettings from '@/components/website-settings'
 import ArticleGeneratorForm from '@/components/article-generator-form'
 import SyncSanityButton from '@/components/sync-sanity-button'
+import TierToggle from '@/components/tier-toggle'
 
 // Types
 type PageProps = {
@@ -89,9 +90,12 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         </p>
                     </div>
 
-                    {/* CMS Status / Settings Component (Replaces static status pill) */}
-                    {/* This component handles its own display state (Status Badge + Edit Button OR Edit Form) */}
+                    {/* Tier Toggle */}
+                    <TierToggle />
                 </div>
+
+                {/* CMS Status / Settings Component (Replaces static status pill) */}
+                {/* This component handles its own display state (Status Badge + Edit Button OR Edit Form) */}
 
                 {/* We place the settings Component here. It will render either the "CMS Connected + Edit Button" (if connected) 
                     or the "Connect CMS Form" (if not connected OR editing). 
@@ -128,27 +132,29 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                 </div>
 
                 {/* Article Generator (Only if connected) */}
-                {isCMSConnected && (
-                    <>
-                        {!website.gemini_api_key && !website.groq_api_key && (
-                            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                    ⚠ <strong>No AI API Keys Configured</strong><br />
-                                    Please add at least one AI API key (Gemini or Groq) in website settings above to generate content.
-                                </p>
-                            </div>
-                        )}
-                        <ArticleGeneratorForm
-                            websiteName={website.name}
-                            createJob={createJobAction}
-                            authors={authors || []}
-                            categories={categories || []}
-                            preferredProvider={website.preferred_ai_provider || 'auto'}
-                            hasGeminiKey={!!website.gemini_api_key}
-                            hasGroqKey={!!website.groq_api_key}
-                        />
-                    </>
-                )}
+                {
+                    isCMSConnected && (
+                        <>
+                            {!website.gemini_api_key && !website.groq_api_key && (
+                                <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                        ⚠ <strong>No AI API Keys Configured</strong><br />
+                                        Please add at least one AI API key (Gemini or Groq) in website settings above to generate content.
+                                    </p>
+                                </div>
+                            )}
+                            <ArticleGeneratorForm
+                                websiteName={website.name}
+                                createJob={createJobAction}
+                                authors={authors || []}
+                                categories={categories || []}
+                                preferredProvider={website.preferred_ai_provider || 'auto'}
+                                hasGeminiKey={!!website.gemini_api_key}
+                                hasGroqKey={!!website.groq_api_key}
+                            />
+                        </>
+                    )
+                }
 
                 {/* Articles List */}
                 <Card className="border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -165,6 +171,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Topic</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Model</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
                                 </tr>
@@ -196,6 +203,13 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                                 </form>
                                             )}
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {job.model_used ? (
+                                                <span className="px-2 py-1 text-xs font-mono bg-blue-50 text-blue-700 rounded border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                                    {job.model_used}
+                                                </span>
+                                            ) : '-'}
+                                        </td>
                                         <td className="px-6 py-4">
                                             {job.status === 'completed' ? (
                                                 <Link
@@ -213,7 +227,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                 ))}
                                 {(!jobs || jobs.length === 0) && (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                                             No articles yet. Connect CMS to start generating!
                                         </td>
                                     </tr>
@@ -222,7 +236,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                         </table>
                     </div>
                 </Card>
-            </main>
-        </div>
+            </main >
+        </div >
     )
 }

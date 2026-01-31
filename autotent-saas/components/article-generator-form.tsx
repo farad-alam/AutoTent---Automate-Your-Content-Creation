@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { AVAILABLE_MODELS } from '@/lib/gemini'
 
 type Author = {
     id: string
@@ -26,6 +29,7 @@ type ArticleGeneratorFormProps = {
     preferredProvider?: string
     hasGeminiKey?: boolean
     hasGroqKey?: boolean
+    preferredModel?: string | null
 }
 
 export default function ArticleGeneratorForm({
@@ -36,11 +40,30 @@ export default function ArticleGeneratorForm({
     disabled = false,
     preferredProvider = 'auto',
     hasGeminiKey = false,
-    hasGroqKey = false
+    hasGroqKey = false,
+    preferredModel = null
 }: ArticleGeneratorFormProps) {
     const [isPending, setIsPending] = useState(false)
     const [selectedProvider, setSelectedProvider] = useState(preferredProvider)
     const [showInternalLinking, setShowInternalLinking] = useState(false)
+    const [selectedModel, setSelectedModel] = useState(preferredModel || 'auto')
+    const [userTier, setUserTier] = useState<'free' | 'pro'>('free')
+
+    // Load tier from localStorage on mount
+    useEffect(() => {
+        const savedTier = localStorage.getItem('userTier') as 'free' | 'pro' | null;
+        if (savedTier) {
+            setUserTier(savedTier);
+        }
+
+        // Listen for tier changes
+        const handleTierChange = (e: CustomEvent) => {
+            setUserTier(e.detail.tier);
+        };
+
+        window.addEventListener('tierChanged', handleTierChange as EventListener);
+        return () => window.removeEventListener('tierChanged', handleTierChange as EventListener);
+    }, []);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -158,6 +181,51 @@ export default function ArticleGeneratorForm({
                                 <option key={category.id} value={category.sanity_id}>{category.title}</option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Model Selection Dropdown */}
+                    <div className="space-y-2 px-1">
+                        <Label htmlFor="model" className="text-sm font-medium">
+                            AI Model
+                        </Label>
+                        <Select value={selectedModel} onValueChange={setSelectedModel}>
+                            <SelectTrigger id="model">
+                                <SelectValue placeholder="Auto (Recommended)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="auto">Auto (Recommended)</SelectItem>
+                                <SelectSeparator />
+                                <SelectGroup>
+                                    <SelectLabel>Free Models</SelectLabel>
+                                    {AVAILABLE_MODELS.free.map(model => (
+                                        <SelectItem key={model.id} value={model.id}>
+                                            {model.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                                {userTier === 'pro' && (
+                                    <>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                            <SelectLabel>⭐ Pro Models</SelectLabel>
+                                            {AVAILABLE_MODELS.pro.map(model => (
+                                                <SelectItem key={model.id} value={model.id}>
+                                                    {model.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                            {selectedModel === 'auto'
+                                ? 'Automatically tries fastest model first with fallback'
+                                : `Using ${AVAILABLE_MODELS.free.find(m => m.id === selectedModel)?.name || AVAILABLE_MODELS.pro.find(m => m.id === selectedModel)?.name}`
+                            }
+                        </p>
+                        {/* Hidden input to send selected model to server */}
+                        <input type="hidden" name="preferredModel" value={selectedModel === 'auto' ? '' : selectedModel} />
                     </div>
 
                     {/* Internal Linking Options */}

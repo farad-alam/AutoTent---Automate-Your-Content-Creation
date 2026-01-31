@@ -5,7 +5,97 @@ import { generateGroqContent } from './groq';
 // Helper for delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function generateBlogContent(keyword: string, apiKey: string, intent: string = 'informational', sources: string = "") {
+// ============================================================================
+// MODEL DEFINITIONS
+// ============================================================================
+
+export interface AIModel {
+  id: string;
+  name: string;
+  description: string;
+  tier: 'free' | 'pro';
+}
+
+export const AVAILABLE_MODELS: { free: AIModel[], pro: AIModel[] } = {
+  free: [
+    {
+      id: 'gemini-2.5-flash-lite',
+      name: 'Gemini 2.5 Flash Lite',
+      description: 'Fastest, lowest quota usage',
+      tier: 'free'
+    },
+    {
+      id: 'gemini-2.5-flash',
+      name: 'Gemini 2.5 Flash',
+      description: 'Balanced speed and quality',
+      tier: 'free'
+    },
+    {
+      id: 'gemini-3-flash-preview',
+      name: 'Gemini 3 Flash (Preview)',
+      description: 'Fastest, lowest quota usage',
+      tier: 'free'
+    },
+  ],
+  pro: [
+    {
+      id: 'gemini-3-pro-preview',
+      name: 'Gemini 3 Pro (Preview)',
+      description: 'Latest Gemini 3 Pro model',
+      tier: 'pro'
+    },
+    {
+      id: 'gemini-2.5-pro',
+      name: 'Gemini 2.5 Pro',
+      description: 'Latest Gemini 2.5 Pro model',
+      tier: 'pro'
+    },
+  ]
+};
+
+/**
+ * Get available models based on user tier
+ */
+export function getAvailableModels(tier: 'free' | 'pro'): AIModel[] {
+  return tier === 'pro'
+    ? [...AVAILABLE_MODELS.free, ...AVAILABLE_MODELS.pro]
+    : AVAILABLE_MODELS.free;
+}
+
+/**
+ * Check if a model is allowed for a given tier
+ */
+export function isModelAllowedForTier(modelId: string, tier: 'free' | 'pro'): boolean {
+  const availableModels = getAvailableModels(tier);
+  return availableModels.some(m => m.id === modelId);
+}
+
+/**
+ * Get default fallback models for a tier
+ */
+function getDefaultModels(tier: 'free' | 'pro'): string[] {
+  // Always try lite models first for efficiency
+  const baseModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+
+  // Pro users can also fall back to pro models if free models fail
+  if (tier === 'pro') {
+    return [...baseModels, "gemini-exp-1206"];
+  }
+
+  return baseModels;
+}
+
+// ============================================================================
+// MAIN CONTENT GENERATION
+// ============================================================================
+
+export async function generateBlogContent(
+  keyword: string,
+  apiKey: string,
+  intent: string = 'informational',
+  sources: string = "",
+  preferredModel?: string  // NEW: Optional model override
+) {
   console.log(`Generating AI content for keyword: ${keyword}`);
 
   // Validate API key
@@ -18,13 +108,12 @@ export async function generateBlogContent(keyword: string, apiKey: string, inten
   // Use shared prompt system (same as Groq for consistency)
   const prompt = getPromptForIntent(intent, keyword, sources);
 
+  // Determine which models to try
+  const modelNamesToTry = preferredModel
+    ? [preferredModel]  // If user selected a specific model, use only that
+    : getDefaultModels('free');  // Otherwise use default fallback array
 
-  // PRODUCTION MODELS - Main  // Model fallback order: fastest/lightest first, then more capable models
-  // gemini-2.5-flash-lite: Fastest, lowest quota usage (try first)
-  // gemini-2.5-flash: Balanced speed and quality
-  // gemini-flash-latest: Most capable, auto-updates to latest stable (last resort)
-  const modelNamesToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
-  const maxRetriesPerModel = 2; // Retry each model twice before moving to next
+  const maxRetriesPerModel = preferredModel ? 1 : 2;  // No retries for specific model selection
 
   for (const modelName of modelNamesToTry) {
     for (let attempt = 1; attempt <= maxRetriesPerModel; attempt++) {
@@ -45,15 +134,32 @@ export async function generateBlogContent(keyword: string, apiKey: string, inten
 
         console.log(`✓ Model ${modelName} worked! Parsing response...`);
 
-        let cleanedText = text.trim();
+        // Helper to clean JSON string
+        const cleanJson = (str: string) => {
+          // Remove markdown code blocks
+          str = str.replace(/```json\n?|\n?```/g, '');
 
-        // Find the first '{' and the last '}' to handle potential markdown or explanation text outside JSON
-        const firstBrace = cleanedText.indexOf('{');
-        const lastBrace = cleanedText.lastIndexOf('}');
+          // Find the first '{' and the last '}'
+          const firstBrace = str.indexOf('{');
+          const lastBrace = str.lastIndexOf('}');
 
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
-        }
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            str = str.substring(firstBrace, lastBrace + 1);
+          }
+
+          // Remove potentially harmful control characters, but PRESERVE structural whitespace (\n, \r, \t)
+          // The previous version incorrectly escaped \n to \\n globally, breaking the JSON structure.
+          // We only want to remove truly invalid chars like \0, \b, \f, etc. if they appear outside strings (dangerous)
+          // or just strip them. For simplicity, let's just strip non-whitespace control chars.
+          // \u0000-\u001F includes:
+          // \t (9), \n (10), \r (13) -> Keep these
+          // All others -> Remove
+          str = str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]+/g, '');
+
+          return str;
+        };
+
+        let cleanedText = cleanJson(text.trim());
 
         let content;
         try {

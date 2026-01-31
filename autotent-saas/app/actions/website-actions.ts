@@ -56,6 +56,7 @@ export async function createJob(id: string, formData: FormData) {
     const internalLinkDensity = formData.get('internalLinkDensity') as string || 'medium'
     const intent = formData.get('intent') as string || 'informational'
     const aiProvider = formData.get('aiProvider') as string || 'auto'
+    const preferredModel = formData.get('preferredModel') as string || null  // Get user's preferred AI model
     const projectId = id
 
     const status = scheduledFor ? 'scheduled' : 'pending'
@@ -74,7 +75,8 @@ export async function createJob(id: string, formData: FormData) {
         include_videos: includeVideos,
         use_google_search_links: useGoogleSearchLinks,
         include_internal_links: includeInternalLinks,
-        internal_link_density: internalLinkDensity
+        internal_link_density: internalLinkDensity,
+        preferred_model: preferredModel  // Save user's selected model with the job
     }).select().single()
 
     if (error) console.error(error)

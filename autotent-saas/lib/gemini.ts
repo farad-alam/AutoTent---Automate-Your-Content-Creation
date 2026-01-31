@@ -79,7 +79,7 @@ function getDefaultModels(tier: 'free' | 'pro'): string[] {
 
   // Pro users can also fall back to pro models if free models fail
   if (tier === 'pro') {
-    return [...baseModels, "gemini-exp-1206"];
+    return [...baseModels, "gemini-3-flash-preview"];
   }
 
   return baseModels;
@@ -230,7 +230,7 @@ export async function generateImageSearchTerm(keyword: string, apiKey: string): 
   // 1. Try Gemini if API key is provided
   if (apiKey && apiKey.trim() !== '') {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
+    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
 
     for (const modelName of modelNames) {
       try {
@@ -293,7 +293,7 @@ export async function generateBatchSearchTerms(headings: string[], mainTopic: st
   // 1. Try Gemini if API key is provided
   if (apiKey && apiKey.trim() !== '') {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"];
+    const modelNames = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
 
     for (const modelName of modelNames) {
       try {

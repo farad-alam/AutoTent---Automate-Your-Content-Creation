@@ -320,3 +320,79 @@ export const generateContent = inngest.createFunction(
         return { success: true };
     }
 );
+
+// Cron job to queue upcoming scheduled jobs to Inngest
+// Runs every 6 hours to queue jobs scheduled within the next 6 days
+export const queueUpcomingJobs = inngest.createFunction(
+    {
+        id: "queue-upcoming-jobs",
+        retries: 2
+    },
+    { cron: "0 */6 * * *" }, // Every 6 hours
+    async ({ step }) => {
+        const supabase = createServiceClient();
+
+        // Calculate time window: now to 6 days from now
+        const now = new Date();
+        const sixDaysFromNow = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+        const results = await step.run("queue-eligible-jobs", async () => {
+            // Find jobs that need to be queued
+            const { data: jobs, error } = await supabase
+                .from('jobs')
+                .select('*')
+                .eq('status', 'scheduled')
+                .eq('inngest_queued', false)
+                .gte('scheduled_for', now.toISOString())
+                .lte('scheduled_for', sixDaysFromNow.toISOString());
+
+            if (error) {
+                console.error("Error fetching jobs to queue:", error);
+                throw error;
+            }
+
+            if (!jobs || jobs.length === 0) {
+                console.log("No jobs to queue at this time");
+                return { queued: 0, failed: 0 };
+            }
+
+            console.log(`Found ${jobs.length} jobs to queue`);
+
+            let queued = 0;
+            let failed = 0;
+
+            // Queue each job to Inngest
+            for (const job of jobs) {
+                try {
+                    // Send job/created event
+                    await inngest.send({
+                        name: "job/created",
+                        data: {
+                            jobId: job.id,
+                            projectId: job.project_id,
+                            keyword: job.keyword,
+                            scheduledFor: job.scheduled_for
+                        }
+                    });
+
+                    // Mark as queued in database
+                    await supabase
+                        .from('jobs')
+                        .update({ inngest_queued: true })
+                        .eq('id', job.id);
+
+                    queued++;
+                    console.log(`Queued job ${job.id} for ${job.scheduled_for}`);
+                } catch (err: any) {
+                    failed++;
+                    console.error(`Failed to queue job ${job.id}:`, err.message);
+                }
+            }
+
+            return { queued, failed, total: jobs.length };
+        });
+
+        console.log(`Queue run complete: ${results.queued} queued, ${results.failed} failed`);
+        return results;
+    }
+);

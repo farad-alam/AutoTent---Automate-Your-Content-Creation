@@ -62,6 +62,13 @@ export async function createJob(id: string, formData: FormData) {
 
     const status = scheduledFor ? 'scheduled' : 'pending'
 
+    // Determine if job should be queued immediately or wait for cron
+    const shouldQueueImmediately = !scheduledFor || (() => {
+        const scheduleDate = new Date(scheduledFor);
+        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
+        return scheduleDate <= sixDaysFromNow;
+    })();
+
     const { data: job, error } = await supabase.from('jobs').insert({
         user_id: user.id,
         project_id: projectId,
@@ -77,12 +84,13 @@ export async function createJob(id: string, formData: FormData) {
         use_google_search_links: useGoogleSearchLinks,
         include_internal_links: includeInternalLinks,
         internal_link_density: internalLinkDensity,
-        preferred_model: preferredModel  // Save user's selected model with the job
+        preferred_model: preferredModel,  // Save user's selected model with the job
+        inngest_queued: shouldQueueImmediately  // Mark as queued if sending to Inngest now
     }).select().single()
 
     if (error) console.error(error)
 
-    if (job) {
+    if (job && shouldQueueImmediately) {
         try {
             await inngest.send({
                 name: "job/created",
@@ -100,6 +108,8 @@ export async function createJob(id: string, formData: FormData) {
                 error_message: 'Failed to trigger background worker.'
             }).eq('id', job.id)
         }
+    } else if (job && !shouldQueueImmediately) {
+        console.log(`Job ${job.id} scheduled for ${scheduledFor} - will be queued by cron`)
     }
     redirect(`/dashboard/websites/${id}`)
 }
@@ -193,7 +203,15 @@ export async function updateJob(id: string, jobId: string, formData: FormData) {
 
     if (scheduledFor) {
         updates.scheduled_for = scheduledFor
+        updates.inngest_queued = false  // Reset queue status when schedule changes
     }
+
+    // Determine if job should be queued immediately or wait for cron
+    const shouldQueueImmediately = scheduledFor && (() => {
+        const scheduleDate = new Date(scheduledFor);
+        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
+        return scheduleDate <= sixDaysFromNow;
+    })();
 
     // 3. Update Database (using service client to bypass RLS)
     const serviceClient = createServiceClient()
@@ -215,16 +233,26 @@ export async function updateJob(id: string, jobId: string, formData: FormData) {
             data: { jobId: jobId }
         })
 
-        // Schedule the new run
-        await inngest.send({
-            name: "job/created",
-            data: {
-                jobId: jobId,
-                projectId: currentJob.project_id,
-                keyword: keyword,
-                scheduledFor: scheduledFor || null
-            }
-        })
+        // Only queue immediately if within 6-day window
+        if (shouldQueueImmediately) {
+            await inngest.send({
+                name: "job/created",
+                data: {
+                    jobId: jobId,
+                    projectId: currentJob.project_id,
+                    keyword: keyword,
+                    scheduledFor: scheduledFor || null
+                }
+            })
+
+            // Mark as queued
+            await serviceClient
+                .from('jobs')
+                .update({ inngest_queued: true })
+                .eq('id', jobId)
+        } else {
+            console.log(`Job ${jobId} scheduled for ${scheduledFor} - will be queued by cron`)
+        }
     } catch (inngestError: any) {
         console.error("Failed to reschedule job in Inngest:", inngestError)
     }

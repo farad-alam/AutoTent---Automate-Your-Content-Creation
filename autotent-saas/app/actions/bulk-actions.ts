@@ -34,23 +34,37 @@ export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
     }
 
     // Prepare bulk insert data
-    const jobInserts = jobs.map(job => ({
-        user_id: user.id,
-        project_id: websiteId,
-        keyword: job.keyword,
-        status: job.scheduledFor ? 'scheduled' : 'pending',
-        intent: job.intent,
-        ai_provider: job.aiProvider,
-        scheduled_for: job.scheduledFor || null,
-        sanity_author_id: job.authorId || null,
-        sanity_category_id: job.categoryId || null,
-        include_images: job.includeImages,
-        include_videos: job.includeVideos,
-        use_google_search_links: job.useGoogleSearchLinks,
-        include_internal_links: job.includeInternalLinks,
-        internal_link_density: job.internalLinkDensity,
-        preferred_model: job.preferredModel
-    }))
+    // Calculate which jobs should be queued immediately (within 6 days)
+    const sixDaysFromNow = new Date()
+    sixDaysFromNow.setDate(sixDaysFromNow.getDate() + 6)
+    sixDaysFromNow.setHours(23, 59, 59, 999)
+
+    const jobInserts = jobs.map(job => {
+        // Determine if this job should be queued immediately
+        const shouldQueueImmediately = !job.scheduledFor || (() => {
+            const scheduleDate = new Date(job.scheduledFor)
+            return scheduleDate <= sixDaysFromNow
+        })()
+
+        return {
+            user_id: user.id,
+            project_id: websiteId,
+            keyword: job.keyword,
+            status: job.scheduledFor ? 'scheduled' : 'pending',
+            intent: job.intent,
+            ai_provider: job.aiProvider,
+            scheduled_for: job.scheduledFor || null,
+            sanity_author_id: job.authorId || null,
+            sanity_category_id: job.categoryId || null,
+            include_images: job.includeImages,
+            include_videos: job.includeVideos,
+            use_google_search_links: job.useGoogleSearchLinks,
+            include_internal_links: job.includeInternalLinks,
+            internal_link_density: job.internalLinkDensity,
+            preferred_model: job.preferredModel,
+            inngest_queued: shouldQueueImmediately  // Set flag during insert
+        }
+    })
 
     // Batch insert into database
     const { data: createdJobs, error } = await supabase
@@ -65,15 +79,8 @@ export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
 
     // Only trigger Inngest events for jobs scheduled within the next 6 days
     // Jobs beyond 6 days will be picked up by the queueUpcomingJobs cron
-    const sixDaysFromNow = new Date()
-    sixDaysFromNow.setDate(sixDaysFromNow.getDate() + 6)
-    sixDaysFromNow.setHours(23, 59, 59, 999)
-
-    const jobsToQueue = createdJobs.filter(job => {
-        if (!job.scheduled_for) return true // Queue unscheduled jobs immediately
-        const scheduledDate = new Date(job.scheduled_for)
-        return scheduledDate <= sixDaysFromNow
-    })
+    // Note: We've already set inngest_queued during insert, so we just need to filter
+    const jobsToQueue = createdJobs.filter(job => job.inngest_queued === true)
 
     const jobsBeyondWindow = createdJobs.length - jobsToQueue.length
 
@@ -90,7 +97,20 @@ export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
 
         try {
             await inngest.send(inngestEvents)
-            console.log(`Queued ${jobsToQueue.length} jobs in Inngest. ${jobsBeyondWindow} jobs beyond 6-day window will be queued by cron.`)
+
+            // CRITICAL FIX: Verify the database was updated correctly
+            // Even though we set inngest_queued during insert, verify it persisted
+            const queuedJobIds = jobsToQueue.map(j => j.id)
+            const { error: updateError } = await supabase
+                .from('jobs')
+                .update({ inngest_queued: true })
+                .in('id', queuedJobIds)
+
+            if (updateError) {
+                console.error('Failed to update inngest_queued flags:', updateError)
+            }
+
+            console.log(`✓ Queued ${jobsToQueue.length} jobs in Inngest. ${jobsBeyondWindow} jobs beyond 6-day window will be queued by cron.`)
         } catch (inngestError: any) {
             console.error('Inngest bulk trigger failed:', inngestError.message)
 

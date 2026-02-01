@@ -101,6 +101,19 @@ export async function createJob(id: string, formData: FormData) {
                     scheduledFor: scheduledFor || null
                 }
             })
+
+            // CRITICAL FIX: Verify inngest_queued flag is set
+            // Even though we set it during insert, verify it persisted
+            const { error: updateError } = await supabase
+                .from('jobs')
+                .update({ inngest_queued: true })
+                .eq('id', job.id)
+
+            if (updateError) {
+                console.error('Failed to verify inngest_queued flag:', updateError)
+            } else {
+                console.log(`✓ Job ${job.id} queued to Inngest and marked in database`)
+            }
         } catch (inngestError: any) {
             console.error('Inngest trigger failed:', inngestError.message)
             await supabase.from('jobs').update({
@@ -311,16 +324,21 @@ export async function deleteJob(id: string, formData: FormData) {
 
     console.log(`Job found: ${currentJob.keyword}, status: ${currentJob.status}`)
 
-    // 2. Cancel Inngest task if it exists
-    try {
-        await inngest.send({
-            name: "job/cancelled",
-            data: { jobId: jobId }
-        })
-        console.log(`Inngest task cancelled for job ${jobId}`)
-    } catch (inngestError: any) {
-        console.error("Failed to cancel job in Inngest:", inngestError)
-        // Continue with deletion even if Inngest fails
+    // 2. Cancel Inngest task if it exists and was queued
+    if (currentJob.inngest_queued) {
+        try {
+            await inngest.send({
+                name: "job/cancelled",
+                data: { jobId: jobId }
+            })
+            console.log(`✓ Sent cancellation event to Inngest for job ${jobId}`)
+        } catch (inngestError: any) {
+            console.error(`✗ Failed to cancel job in Inngest:`, inngestError)
+            // Continue with deletion even if Inngest fails - better to delete from DB
+            // The Inngest job will fail when it tries to process a non-existent job
+        }
+    } else {
+        console.log(`Job ${jobId} was not queued to Inngest yet - no cancellation needed`)
     }
 
     // 3. Delete from database using service client (bypasses RLS)

@@ -29,6 +29,42 @@ export const generateContent = inngest.createFunction(
             await step.sleepUntil("wait-for-schedule", scheduledFor);
         }
 
+        // CRITICAL: Check if job still exists and is valid after waking from sleep
+        // This 'Defense-in-Depth' protects against jobs deleted or rescheduled while sleeping
+        // because Inngest cancellation events can sometimes be missed in production distributed systems.
+        const shouldRun = await step.run("verify-job-validity", async () => {
+            const { data: job } = await supabase
+                .from('jobs')
+                .select('id, status, inngest_queued')
+                .eq('id', jobId)
+                .single();
+
+            // 1. Job was deleted
+            if (!job) {
+                console.log(`🛑 Job ${jobId} deleted from DB - cancelling execution`);
+                return false;
+            }
+
+            // 2. Job status changed (e.g. failed, cancelled, completed)
+            if (job.status !== 'scheduled' && job.status !== 'pending') {
+                console.log(`🛑 Job ${jobId} status is '${job.status}' (not scheduled) - cancelling`);
+                return false;
+            }
+
+            // 3. Job was rescheduled to far future (inngest_queued set to false)
+            // Or explicitly removed from queue
+            if (job.inngest_queued === false) {
+                console.log(`🛑 Job ${jobId} has inngest_queued=false - cancelling`);
+                return false;
+            }
+
+            return true;
+        });
+
+        if (!shouldRun) {
+            return { cancelled: true, reason: "Job invalid after sleep" };
+        }
+
         // 1. Fetch Job & Project Details
         const projectData = await step.run("fetch-project-data", async () => {
             const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).single();

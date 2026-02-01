@@ -41,6 +41,9 @@ interface ScheduleItem {
     hour: string
     minute: string
     period: 'AM' | 'PM'
+    categoryId: string
+    intent: string
+    model: string
 }
 
 export default function BulkGeneratorDialog({
@@ -74,6 +77,7 @@ export default function BulkGeneratorDialog({
     const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([])
     const [autoStartDate, setAutoStartDate] = useState<Date>()
     const [postsPerDay, setPostsPerDay] = useState('1')
+    const [timeGapMinutes, setTimeGapMinutes] = useState('30')
 
     // Load tier from localStorage
     useEffect(() => {
@@ -101,13 +105,16 @@ export default function BulkGeneratorDialog({
             return
         }
 
-        // Initialize schedule items with default times
+        // Initialize schedule items with default times and global settings
         const items: ScheduleItem[] = keywords.map(keyword => ({
             keyword,
             date: undefined,
             hour: '12',
             minute: '00',
-            period: 'PM'
+            period: 'PM',
+            categoryId: selectedCategory,
+            intent: selectedIntent,
+            model: selectedModel
         }))
 
         setScheduleItems(items)
@@ -126,6 +133,12 @@ export default function BulkGeneratorDialog({
             return
         }
 
+        const timeGapMins = parseInt(timeGapMinutes)
+        if (timeGapMins < 1) {
+            alert('Time gap must be at least 1 minute')
+            return
+        }
+
         const updatedItems = scheduleItems.map((item, index) => {
             const dayOffset = Math.floor(index / postsPerDayNum)
             const postIndexInDay = index % postsPerDayNum
@@ -133,20 +146,23 @@ export default function BulkGeneratorDialog({
             const scheduleDate = new Date(autoStartDate)
             scheduleDate.setDate(scheduleDate.getDate() + dayOffset)
 
-            // Distribute posts throughout the day (8 AM to 8 PM)
-            const baseHour = 8
-            const hourSpread = 12 / postsPerDayNum
-            const targetHour = Math.floor(baseHour + (postIndexInDay * hourSpread))
+            // Calculate time based on time gap
+            // Start at 8 AM (480 minutes from midnight)
+            const baseMinutesFromMidnight = 8 * 60
+            const totalMinutesFromMidnight = baseMinutesFromMidnight + (postIndexInDay * timeGapMins)
 
-            let hour = targetHour % 12
+            const totalHours = Math.floor(totalMinutesFromMidnight / 60)
+            const minutes = totalMinutesFromMidnight % 60
+
+            let hour = totalHours % 12
             if (hour === 0) hour = 12
-            const period: 'AM' | 'PM' = targetHour >= 12 ? 'PM' : 'AM'
+            const period: 'AM' | 'PM' = totalHours >= 12 ? 'PM' : 'AM'
 
             return {
                 ...item,
                 date: scheduleDate,
                 hour: hour.toString(),
-                minute: '00',
+                minute: minutes.toString().padStart(2, '0'),
                 period
             }
         })
@@ -189,9 +205,9 @@ export default function BulkGeneratorDialog({
                     keyword: item.keyword,
                     scheduledFor: scheduledDateTime.toISOString(),
                     authorId: selectedAuthor || null,
-                    categoryId: selectedCategory || null,
-                    preferredModel: selectedModel === 'auto' ? null : selectedModel,
-                    intent: selectedIntent,
+                    categoryId: item.categoryId || null,
+                    preferredModel: item.model === 'auto' ? null : item.model,
+                    intent: item.intent,
                     aiProvider: selectedProvider,
                     includeImages,
                     includeVideos,
@@ -404,7 +420,7 @@ export default function BulkGeneratorDialog({
                             {/* Auto-schedule controls */}
                             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                                 <h4 className="font-semibold text-sm">Auto-Schedule Settings</h4>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-4 gap-3">
                                     <div className="space-y-2">
                                         <Label className="text-xs">Start Date</Label>
                                         <Popover>
@@ -440,8 +456,17 @@ export default function BulkGeneratorDialog({
                                         />
                                     </div>
                                     <div className="space-y-2">
+                                        <Label className="text-xs">Time Gap (mins)</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={timeGapMinutes}
+                                            onChange={(e) => setTimeGapMinutes(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
                                         <Label className="text-xs">&nbsp;</Label>
-                                        <Button onClick={handleAutoDistribute} className="w-full">
+                                        <Button onClick={handleAutoDistribute} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                             Apply Auto-Schedule
                                         </Button>
                                     </div>
@@ -453,77 +478,128 @@ export default function BulkGeneratorDialog({
                                 <Label>Scheduled Posts ({scheduleItems.length})</Label>
                                 <div className="max-h-[400px] overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-lg divide-y">
                                     {scheduleItems.map((item, index) => (
-                                        <div key={index} className="p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{item.keyword}</p>
+                                        <div key={index} className="p-3 space-y-2">
+                                            <div className="flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 -m-3 p-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">{item.keyword}</p>
+                                                </div>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className={cn(
+                                                                "text-xs",
+                                                                !item.date && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            <CalendarIcon className="mr-1 h-3 w-3" />
+                                                            {item.date ? format(item.date, "MMM dd") : "Set date"}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={item.date}
+                                                            onSelect={(date) => updateScheduleItem(index, { date })}
+                                                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <div className="flex gap-1">
+                                                    <Select value={item.hour} onValueChange={(val) => updateScheduleItem(index, { hour: val })}>
+                                                        <SelectTrigger className="w-[60px] h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                                                                <SelectItem key={h} value={h.toString()}>
+                                                                    {h.toString().padStart(2, '0')}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <span className="text-gray-400 text-xs self-center">:</span>
+                                                    <Select value={item.minute} onValueChange={(val) => updateScheduleItem(index, { minute: val })}>
+                                                        <SelectTrigger className="w-[60px] h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                                                                <SelectItem key={m} value={m.toString().padStart(2, '0')}>
+                                                                    {m.toString().padStart(2, '0')}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Select value={item.period} onValueChange={(val: 'AM' | 'PM') => updateScheduleItem(index, { period: val })}>
+                                                        <SelectTrigger className="w-[60px] h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="AM">AM</SelectItem>
+                                                            <SelectItem value="PM">PM</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => removeScheduleItem(index)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className={cn(
-                                                            "text-xs",
-                                                            !item.date && "text-muted-foreground"
-                                                        )}
+                                            <div className="grid grid-cols-3 gap-2 pl-3">
+                                                <div>
+                                                    <Label className="text-[10px] text-gray-500">Category</Label>
+                                                    <select
+                                                        value={item.categoryId}
+                                                        onChange={(e) => updateScheduleItem(index, { categoryId: e.target.value })}
+                                                        className="flex h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                     >
-                                                        <CalendarIcon className="mr-1 h-3 w-3" />
-                                                        {item.date ? format(item.date, "MMM dd") : "Set date"}
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={item.date}
-                                                        onSelect={(date) => updateScheduleItem(index, { date })}
-                                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <div className="flex gap-1">
-                                                <Select value={item.hour} onValueChange={(val) => updateScheduleItem(index, { hour: val })}>
-                                                    <SelectTrigger className="w-[60px] h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                                                            <SelectItem key={h} value={h.toString()}>
-                                                                {h.toString().padStart(2, '0')}
-                                                            </SelectItem>
+                                                        <option value="">None</option>
+                                                        {categories.map(category => (
+                                                            <option key={category.id} value={category.sanity_id}>{category.title}</option>
                                                         ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <span className="text-gray-400 text-xs self-center">:</span>
-                                                <Select value={item.minute} onValueChange={(val) => updateScheduleItem(index, { minute: val })}>
-                                                    <SelectTrigger className="w-[60px] h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                                                            <SelectItem key={m} value={m.toString().padStart(2, '0')}>
-                                                                {m.toString().padStart(2, '0')}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <Select value={item.period} onValueChange={(val: 'AM' | 'PM') => updateScheduleItem(index, { period: val })}>
-                                                    <SelectTrigger className="w-[60px] h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="AM">AM</SelectItem>
-                                                        <SelectItem value="PM">PM</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[10px] text-gray-500">Intent</Label>
+                                                    <select
+                                                        value={item.intent}
+                                                        onChange={(e) => updateScheduleItem(index, { intent: e.target.value })}
+                                                        className="flex h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                    >
+                                                        <option value="informational">Info</option>
+                                                        <option value="howto">How-To</option>
+                                                        <option value="commercial">Review</option>
+                                                        <option value="comparison">Compare</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[10px] text-gray-500">AI Model</Label>
+                                                    <Select value={item.model} onValueChange={(val) => updateScheduleItem(index, { model: val })}>
+                                                        <SelectTrigger className="h-7 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="auto">Auto</SelectItem>
+                                                            {AVAILABLE_MODELS.free.map(model => (
+                                                                <SelectItem key={model.id} value={model.id}>
+                                                                    {model.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                            {userTier === 'pro' && AVAILABLE_MODELS.pro.map(model => (
+                                                                <SelectItem key={model.id} value={model.id}>
+                                                                    ⭐ {model.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() => removeScheduleItem(index)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
                                         </div>
                                     ))}
                                 </div>

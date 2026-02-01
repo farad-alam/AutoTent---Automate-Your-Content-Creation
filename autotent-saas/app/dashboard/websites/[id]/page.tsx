@@ -17,8 +17,9 @@ type PageProps = {
     params: Promise<{ id: string }>
 }
 
-import { updateCMS, createJob, retryJob, deletePendingJobs, updateJob } from '@/app/actions/website-actions'
+import { updateCMS, createJob, retryJob, deletePendingJobs, updateJob, deleteJob } from '@/app/actions/website-actions'
 import EditJobDialog from '@/components/edit-job-dialog'
+import DeleteJobButton from '@/components/delete-job-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,6 +68,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
     const createJobAction = createJob.bind(null, id)
     const deletePendingJobsAction = deletePendingJobs.bind(null, id)
     const updateJobAction = updateJob.bind(null, id)
+    const deleteJobAction = deleteJob.bind(null, id)
 
 
     // Check if CMS is connected
@@ -229,13 +231,19 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                                 </Link>
                                             )}
                                             {job.status === 'scheduled' && (
-                                                <EditJobDialog
-                                                    job={job}
-                                                    websiteId={id}
-                                                    authors={authors || []}
-                                                    categories={categories || []}
-                                                    updateJob={updateJobAction}
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <EditJobDialog
+                                                        job={job}
+                                                        websiteId={id}
+                                                        authors={authors || []}
+                                                        categories={categories || []}
+                                                        updateJob={updateJobAction}
+                                                    />
+                                                    <DeleteJobButton
+                                                        jobId={job.id}
+                                                        action={deleteJobAction}
+                                                    />
+                                                </div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">

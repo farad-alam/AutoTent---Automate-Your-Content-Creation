@@ -181,8 +181,9 @@ export async function updateJob(id: string, jobId: string, formData: FormData) {
     // 2. Extract and Validate Form Data
     const scheduledFor = formData.get('scheduledFor') as string
     const keyword = formData.get('keyword') as string
-    const authorId = formData.get('authorId') as string
+    const authorId = formData.get('author Id') as string
     const categoryId = formData.get('categoryId') as string
+    const intent = formData.get('intent') as string
     // const includeImages = formData.get('includeImages') === 'on' 
     const preferredModel = formData.get('preferredModel') as string || null
 
@@ -193,17 +194,27 @@ export async function updateJob(id: string, jobId: string, formData: FormData) {
         }
     }
 
+    // Check if scheduled time actually changed
+    const scheduleTimeChanged = scheduledFor && (
+        !currentJob.scheduled_for ||
+        new Date(scheduledFor).getTime() !== new Date(currentJob.scheduled_for).getTime()
+    )
+
     const updates: any = {
         keyword,
         sanity_author_id: authorId || null,
         sanity_category_id: categoryId || null,
+        intent: intent || 'informational',
         preferred_model: preferredModel,
         status: 'scheduled'
     }
 
     if (scheduledFor) {
         updates.scheduled_for = scheduledFor
-        updates.inngest_queued = false  // Reset queue status when schedule changes
+        // Only reset queue status if schedule actually changed
+        if (scheduleTimeChanged) {
+            updates.inngest_queued = false
+        }
     }
 
     // Determine if job should be queued immediately or wait for cron
@@ -225,38 +236,109 @@ export async function updateJob(id: string, jobId: string, formData: FormData) {
         throw new Error(`Failed to update job: ${error.message}`)
     }
 
-    // 4. Handle Inngest Rescheduling
-    try {
-        // Cancel the previous run
-        await inngest.send({
-            name: "job/cancelled",
-            data: { jobId: jobId }
-        })
-
-        // Only queue immediately if within 6-day window
-        if (shouldQueueImmediately) {
+    // 4. Handle Inngest Rescheduling - ONLY if schedule time changed
+    if (scheduleTimeChanged) {
+        try {
+            // Cancel the previous run
             await inngest.send({
-                name: "job/created",
-                data: {
-                    jobId: jobId,
-                    projectId: currentJob.project_id,
-                    keyword: keyword,
-                    scheduledFor: scheduledFor || null
-                }
+                name: "job/cancelled",
+                data: { jobId: jobId }
             })
 
-            // Mark as queued
-            await serviceClient
-                .from('jobs')
-                .update({ inngest_queued: true })
-                .eq('id', jobId)
-        } else {
-            console.log(`Job ${jobId} scheduled for ${scheduledFor} - will be queued by cron`)
+            // Only queue immediately if within 6-day window
+            if (shouldQueueImmediately) {
+                await inngest.send({
+                    name: "job/created",
+                    data: {
+                        jobId: jobId,
+                        projectId: currentJob.project_id,
+                        keyword: keyword,
+                        scheduledFor: scheduledFor || null
+                    }
+                })
+
+                // Mark as queued
+                await serviceClient
+                    .from('jobs')
+                    .update({ inngest_queued: true })
+                    .eq('id', jobId)
+            } else {
+                console.log(`Job ${jobId} rescheduled for ${scheduledFor} - will be queued by cron`)
+            }
+        } catch (inngestError: any) {
+            console.error("Failed to reschedule job in Inngest:", inngestError)
         }
-    } catch (inngestError: any) {
-        console.error("Failed to reschedule job in Inngest:", inngestError)
+    } else {
+        console.log(`Job ${jobId} metadata updated - schedule unchanged, no Inngest reschedule needed`)
     }
 
     revalidatePath(`/dashboard/websites/${id}`)
     redirect(`/dashboard/websites/${id}`)
 }
+
+
+export async function deleteJob(id: string, formData: FormData) {
+    const supabase = await createClient()
+
+    const jobId = formData.get('jobId') as string
+
+    // Re-authenticate user
+    const { data: { user } = {} } = await supabase.auth.getUser()
+    if (!user) {
+        console.error('No user found for delete operation')
+        return
+    }
+
+    console.log(`Attempting to delete job ${jobId} for user ${user.id}`)
+
+    // 1. Fetch current job to verify ownership
+    const { data: currentJob, error: fetchError } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (fetchError) {
+        console.error('Error fetching job:', fetchError)
+        throw new Error(`Failed to fetch job: ${fetchError.message}`)
+    }
+
+    if (!currentJob) {
+        console.error('Job not found or access denied')
+        throw new Error("Job not found or access denied")
+    }
+
+    console.log(`Job found: ${currentJob.keyword}, status: ${currentJob.status}`)
+
+    // 2. Cancel Inngest task if it exists
+    try {
+        await inngest.send({
+            name: "job/cancelled",
+            data: { jobId: jobId }
+        })
+        console.log(`Inngest task cancelled for job ${jobId}`)
+    } catch (inngestError: any) {
+        console.error("Failed to cancel job in Inngest:", inngestError)
+        // Continue with deletion even if Inngest fails
+    }
+
+    // 3. Delete from database using service client (bypasses RLS)
+    const serviceClient = createServiceClient()
+    const { error: deleteError } = await serviceClient
+        .from('jobs')
+        .delete()
+        .eq('id', jobId)
+        .eq('user_id', user.id)
+
+    if (deleteError) {
+        console.error('Database deletion error:', deleteError)
+        throw new Error(`Failed to delete job: ${deleteError.message}`)
+    }
+
+    console.log(`Job ${jobId} successfully deleted from database`)
+
+    revalidatePath(`/dashboard/websites/${id}`)
+    redirect(`/dashboard/websites/${id}`)
+}
+

@@ -9,10 +9,12 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AVAILABLE_MODELS } from '@/lib/gemini'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, X, Trash2 } from 'lucide-react'
+import { Calendar as CalendarIcon, ArrowLeft, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createBulkJobs, BulkJobData } from '@/app/actions/bulk-actions'
 import { useRouter } from 'next/navigation'
+import DashboardSidebar from '@/components/dashboard-sidebar'
+import Link from 'next/link'
 
 type Author = {
     id: string
@@ -26,7 +28,7 @@ type Category = {
     sanity_id: string
 }
 
-interface BulkGeneratorDialogProps {
+interface BulkSchedulePageClientProps {
     websiteId: string
     websiteName: string
     authors: Author[]
@@ -46,16 +48,15 @@ interface ScheduleItem {
     model: string
 }
 
-export default function BulkGeneratorDialog({
+export default function BulkSchedulePageClient({
     websiteId,
     websiteName,
     authors,
     categories,
     hasGeminiKey = false,
     hasGroqKey = false
-}: BulkGeneratorDialogProps) {
+}: BulkSchedulePageClientProps) {
     const router = useRouter()
-    const [open, setOpen] = useState(false)
     const [step, setStep] = useState<1 | 2>(1)
     const [isPending, setIsPending] = useState(false)
     const [userTier, setUserTier] = useState<'free' | 'pro'>('free')
@@ -225,8 +226,8 @@ export default function BulkGeneratorDialog({
 
             await createBulkJobs(websiteId, jobs)
 
-            // Success - close dialog and refresh
-            setOpen(false)
+            // Success - navigate back to website page
+            router.push(`/dashboard/websites/${websiteId}`)
             router.refresh()
         } catch (error: any) {
             console.error('Bulk schedule error:', error)
@@ -236,41 +237,28 @@ export default function BulkGeneratorDialog({
         }
     }
 
-    const handleClose = () => {
-        setOpen(false)
-        setStep(1)
-        setKeywordsInput('')
-        setScheduleItems([])
-    }
-
-    if (!open) {
-        return (
-            <Button
-                variant="outline"
-                className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                onClick={() => setOpen(true)}
-            >
-                📋 Bulk Schedule
-            </Button>
-        )
-    }
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-full max-w-[800px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+            <DashboardSidebar />
+
+            <main className="flex-1 ml-64 p-8">
+                {/* Header with Breadcrumb */}
+                <div className="mb-6">
+                    <Link
+                        href={`/dashboard/websites/${websiteId}`}
+                        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to {websiteName}
+                    </Link>
                     <div>
-                        <h3 className="text-lg font-semibold">Bulk Schedule for {websiteName}</h3>
+                        <h1 className="text-2xl font-bold">Bulk Schedule</h1>
                         <p className="text-sm text-gray-500">Step {step} of 2</p>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleClose}>
-                        <X className="h-4 w-4" />
-                    </Button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-6xl">
                     {step === 1 && (
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -647,35 +635,37 @@ export default function BulkGeneratorDialog({
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-between gap-3">
-                    {step === 1 ? (
-                        <>
-                            <Button variant="outline" onClick={handleClose}>
-                                Cancel
-                            </Button>
-                            <Button onClick={handleStep1Next} className="bg-purple-600 hover:bg-purple-700 text-white">
-                                Next: Configure Schedule →
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <Button variant="outline" onClick={() => setStep(1)}>
-                                ← Back
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isPending || scheduleItems.length === 0}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                                {isPending ? 'Scheduling...' : `Schedule ${scheduleItems.length} Posts`}
-                            </Button>
-                        </>
-                    )}
+                    {/* Footer */}
+                    <div className="mt-6 flex justify-between gap-3">
+                        {step === 1 ? (
+                            <>
+                                <Link href={`/dashboard/websites/${websiteId}`}>
+                                    <Button variant="outline">
+                                        Cancel
+                                    </Button>
+                                </Link>
+                                <Button onClick={handleStep1Next} className="bg-purple-600 hover:bg-purple-700 text-white">
+                                    Next: Configure Schedule →
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button variant="outline" onClick={() => setStep(1)}>
+                                    ← Back
+                                </Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={isPending || scheduleItems.length === 0}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    {isPending ? 'Scheduling...' : `Schedule ${scheduleItems.length} Posts`}
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
     )
 }

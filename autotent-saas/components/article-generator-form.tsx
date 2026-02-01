@@ -18,6 +18,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import BulkGeneratorDialog from '@/components/bulk-generator-dialog'
+import Link from 'next/link'
 
 type Author = {
     id: string
@@ -137,14 +138,14 @@ export default function ArticleGeneratorForm({
                         <span className="text-2xl">🚀</span>
                         Generate Article for {websiteName}
                     </CardTitle>
-                    <BulkGeneratorDialog
-                        websiteId={websiteId}
-                        websiteName={websiteName}
-                        authors={authors}
-                        categories={categories}
-                        hasGeminiKey={hasGeminiKey}
-                        hasGroqKey={hasGroqKey}
-                    />
+                    <Link href={`/dashboard/websites/${websiteId}/bulk-schedule`}>
+                        <Button
+                            variant="outline"
+                            className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                        >
+                            📋 Bulk Schedule
+                        </Button>
+                    </Link>
                 </div>
             </CardHeader>
             <CardContent className="pt-6">

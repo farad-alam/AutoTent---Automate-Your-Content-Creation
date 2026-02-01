@@ -63,33 +63,51 @@ export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
         throw new Error(`Failed to create jobs: ${error.message}`)
     }
 
-    // Trigger Inngest events for each job
-    const inngestEvents = createdJobs.map(job => ({
-        name: "job/created" as const,
-        data: {
-            jobId: job.id,
-            projectId: websiteId,
-            keyword: job.keyword,
-            scheduledFor: job.scheduled_for || null
+    // Only trigger Inngest events for jobs scheduled within the next 6 days
+    // Jobs beyond 6 days will be picked up by the queueUpcomingJobs cron
+    const sixDaysFromNow = new Date()
+    sixDaysFromNow.setDate(sixDaysFromNow.getDate() + 6)
+    sixDaysFromNow.setHours(23, 59, 59, 999)
+
+    const jobsToQueue = createdJobs.filter(job => {
+        if (!job.scheduled_for) return true // Queue unscheduled jobs immediately
+        const scheduledDate = new Date(job.scheduled_for)
+        return scheduledDate <= sixDaysFromNow
+    })
+
+    const jobsBeyondWindow = createdJobs.length - jobsToQueue.length
+
+    if (jobsToQueue.length > 0) {
+        const inngestEvents = jobsToQueue.map(job => ({
+            name: "job/created" as const,
+            data: {
+                jobId: job.id,
+                projectId: websiteId,
+                keyword: job.keyword,
+                scheduledFor: job.scheduled_for || null
+            }
+        }))
+
+        try {
+            await inngest.send(inngestEvents)
+            console.log(`Queued ${jobsToQueue.length} jobs in Inngest. ${jobsBeyondWindow} jobs beyond 6-day window will be queued by cron.`)
+        } catch (inngestError: any) {
+            console.error('Inngest bulk trigger failed:', inngestError.message)
+
+            // Mark queued jobs as failed if Inngest fails
+            const jobIds = jobsToQueue.map(j => j.id)
+            await supabase
+                .from('jobs')
+                .update({
+                    status: 'failed',
+                    error_message: 'Failed to trigger background worker.'
+                })
+                .in('id', jobIds)
+
+            throw new Error('Failed to schedule jobs for processing')
         }
-    }))
-
-    try {
-        await inngest.send(inngestEvents)
-    } catch (inngestError: any) {
-        console.error('Inngest bulk trigger failed:', inngestError.message)
-
-        // Mark all jobs as failed if Inngest fails
-        const jobIds = createdJobs.map(j => j.id)
-        await supabase
-            .from('jobs')
-            .update({
-                status: 'failed',
-                error_message: 'Failed to trigger background worker.'
-            })
-            .in('id', jobIds)
-
-        throw new Error('Failed to schedule jobs for processing')
+    } else {
+        console.log(`All ${createdJobs.length} jobs are beyond 6-day window. They will be queued by the cron job.`)
     }
 
     return { success: true, count: createdJobs.length }

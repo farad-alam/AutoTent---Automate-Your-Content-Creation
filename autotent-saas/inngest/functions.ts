@@ -329,7 +329,7 @@ export const queueUpcomingJobs = inngest.createFunction(
         retries: 2
     },
     { cron: "0 */6 * * *" }, // Every 6 hours
-    async ({ step }) => {
+    async ({ step }: any) => {
         const supabase = createServiceClient();
 
         // Calculate time window: now to 6 days from now

@@ -17,6 +17,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import BulkGeneratorDialog from '@/components/bulk-generator-dialog'
 
 type Author = {
     id: string
@@ -32,6 +33,7 @@ type Category = {
 
 type ArticleGeneratorFormProps = {
     websiteName: string
+    websiteId: string
     createJob: (formData: FormData) => Promise<void>
     authors: Author[]
     categories: Category[]
@@ -44,6 +46,7 @@ type ArticleGeneratorFormProps = {
 
 export default function ArticleGeneratorForm({
     websiteName,
+    websiteId,
     createJob,
     authors = [],
     categories = [],
@@ -129,10 +132,20 @@ export default function ArticleGeneratorForm({
     return (
         <Card className="mb-8 border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
-                <CardTitle className="flex items-center gap-2">
-                    <span className="text-2xl">🚀</span>
-                    Generate Article for {websiteName}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                        <span className="text-2xl">🚀</span>
+                        Generate Article for {websiteName}
+                    </CardTitle>
+                    <BulkGeneratorDialog
+                        websiteId={websiteId}
+                        websiteName={websiteName}
+                        authors={authors}
+                        categories={categories}
+                        hasGeminiKey={hasGeminiKey}
+                        hasGroqKey={hasGroqKey}
+                    />
+                </div>
             </CardHeader>
             <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">

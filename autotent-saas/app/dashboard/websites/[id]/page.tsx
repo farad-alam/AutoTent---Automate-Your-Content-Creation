@@ -149,6 +149,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                             )}
                             <ArticleGeneratorForm
                                 websiteName={website.name}
+                                websiteId={id}
                                 createJob={createJobAction}
                                 authors={authors || []}
                                 categories={categories || []}

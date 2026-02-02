@@ -222,7 +222,7 @@ OUTPUT JSON ONLY:
         let linkPlan: Array<{ targetArticleSlug: string, originalSnippet: string, rewrittenSnippet: string }> | null = null;
 
         // Try Gemini models in order: standard only (Lite is too imprecise for exact string matching)
-        const geminiModels = ["gemini-2.5-flash-lite"];
+        const geminiModels = ["gemini-2.5-flash"];
         let geminiSuccess = false;
 
         for (const modelName of geminiModels) {
@@ -288,12 +288,32 @@ OUTPUT JSON ONLY:
             }
 
             if (enrichedMarkdown.includes(link.originalSnippet)) {
-                if (link.rewrittenSnippet.includes('](')) {
-                    enrichedMarkdown = enrichedMarkdown.replace(link.originalSnippet, link.rewrittenSnippet);
-                    replacementsMade++;
-                    console.log(`✓ Replaced snippet for slug: ${link.targetArticleSlug}`);
+                // VALIDATION: Ensure the rewrite doesn't add extra text (which causes duplication)
+                // We strip the markdown link syntax from rewrittenSnippet and compare with originalSnippet
+                // They MUST be identical (ignoring minor whitespace/punctuation differences)
+
+                const cleanRewrite = link.rewrittenSnippet
+                    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Convert [text](link) -> text
+                    .trim();
+
+                const cleanOriginal = link.originalSnippet.trim();
+
+                // Check likeness (allow minor punctuation diffs, but strict on words)
+                const isIdentical = cleanRewrite.replace(/[^\w\s]/g, '') === cleanOriginal.replace(/[^\w\s]/g, '');
+
+                if (isIdentical) {
+                    if (link.rewrittenSnippet.includes('](')) {
+                        enrichedMarkdown = enrichedMarkdown.replace(link.originalSnippet, link.rewrittenSnippet);
+                        replacementsMade++;
+                        console.log(`✓ Replaced snippet for slug: ${link.targetArticleSlug}`);
+                    } else {
+                        console.warn(`⚠ Rewritten snippet missing markdown link format:`, link.rewrittenSnippet);
+                    }
                 } else {
-                    console.warn(`⚠ Rewritten snippet missing markdown link format:`, link.rewrittenSnippet);
+                    console.warn(`⚠ REJECTED rewrite to prevent duplication or hallucination.`);
+                    console.warn(`  Original: "${cleanOriginal}"`);
+                    console.warn(`  Cleaned Rewrite: "${cleanRewrite}"`);
+                    console.warn(`  Reason: Rewrite added/changed text content.`);
                 }
             } else {
                 const preview = link.originalSnippet.length > 50

@@ -221,8 +221,8 @@ OUTPUT JSON ONLY:
     try {
         let linkPlan: Array<{ targetArticleSlug: string, originalSnippet: string, rewrittenSnippet: string }> | null = null;
 
-        // Try Gemini models in order: lite → standard
-        const geminiModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+        // Try Gemini models in order: standard only (Lite is too imprecise for exact string matching)
+        const geminiModels = ["gemini-2.5-flash-lite"];
         let geminiSuccess = false;
 
         for (const modelName of geminiModels) {

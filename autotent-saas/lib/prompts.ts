@@ -14,9 +14,10 @@ SEARCH INTENT:
 - Identify and match the dominant search intent (informational / how-to / beginner-friendly).
 - Focus on solving the reader's core problem clearly and completely.
 
-OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
-- Include 2-3 high-quality outbound links in this article.
-- Use ONLY the provided sources below (do not invent URLs):
+OUTBOUND LINKS & CITATIONS (MANDATORY):
+- You MUST include at least 3 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs).
+- Failure to include citations will result in rejection.
 
 {{SOURCES}}
 
@@ -149,9 +150,9 @@ SEARCH INTENT (HOW-TO):
 - Focus on solving the problem quickly, correctly, and confidently.
 - Prioritize practical steps over theory.
 
-OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
-- Include 3-5 high-quality outbound links in this article.
-- Use ONLY the provided sources below (do not invent URLs):
+OUTBOUND LINKS & CITATIONS (MANDATORY):
+- You MUST include at least 3 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs).
 
 {{SOURCES}}
 
@@ -283,9 +284,9 @@ SEARCH INTENT (COMMERCIAL):
 - Focus on providing honest, balanced, and useful insights to help them decide.
 - Build trust through real-world observations, not just specs or sales talk.
 
-OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
-- Include 3-5 high-quality outbound links in this article.
-- Use ONLY the provided sources below (do not invent URLs):
+OUTBOUND LINKS & CITATIONS (MANDATORY):
+- You MUST include at least 3 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs).
 
 {{SOURCES}}
 
@@ -428,9 +429,9 @@ SEARCH INTENT (COMPARISON):
 - Focus on helping them understand the key differences and make the right choice for their specific needs.
 - Provide balanced, honest, and actionable comparisons.
 
-OUTBOUND LINKS & CITATIONS (CRITICAL FOR E-E-A-T):
-- Include 3-5 high-quality outbound links in this article.
-- Use ONLY the provided sources below (do not invent URLs):
+OUTBOUND LINKS & CITATIONS (MANDATORY):
+- You MUST include at least 3 high-quality outbound links in this article.
+- Use ONLY the provided sources below (do not invent URLs).
 
 {{SOURCES}}
 

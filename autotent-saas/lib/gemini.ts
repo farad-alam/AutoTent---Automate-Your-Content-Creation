@@ -74,8 +74,8 @@ export function isModelAllowedForTier(modelId: string, tier: 'free' | 'pro'): bo
  * Get default fallback models for a tier
  */
 function getDefaultModels(tier: 'free' | 'pro'): string[] {
-  // Always try lite models first for efficiency
-  const baseModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  // Always try standard flash first for better quality/instruction following
+  const baseModels = ["gemini-2.5-flash"];
 
   // Pro users can also fall back to pro models if free models fail
   if (tier === 'pro') {

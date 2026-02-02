@@ -90,10 +90,17 @@ export const generateContent = inngest.createFunction(
                 const domains = await getDomainWhitelist(job.keyword);
 
                 // 🔍 Search Tavily using ONLY those trusted domains
-                const results = await searchTavily(job.keyword, domains);
+                let results = await searchTavily(job.keyword, domains);
+
+                // FALLBACK: If strict search failed (0 results), try broad search
+                // This ensures we always have SOME sources for citations
+                if (results.length === 0) {
+                    console.log(`⚠️ Strict search for "${job.keyword}" yielded 0 results. Falling back to broad search...`);
+                    results = await searchTavily(job.keyword); // No domain restriction
+                }
 
                 if (results.length > 0) {
-                    return "Here are some verified sources to use for citations:\n" +
+                    return "Here are some verified sources to use for citations (MANDATORY TO USE):\n" +
                         results.map(s => `- [${s.title}](${s.url})`).join('\n');
                 }
                 return "";

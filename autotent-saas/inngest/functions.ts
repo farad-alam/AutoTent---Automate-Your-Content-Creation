@@ -143,6 +143,7 @@ export const generateContent = inngest.createFunction(
                         metaDescription: groqResult.metaDescription,
                         focusKeyword: groqResult.focusKeyword,
                         slug: groqResult.slug,
+                        modelUsed: groqResult.modelUsed,
                     }
                 }
 
@@ -173,6 +174,7 @@ export const generateContent = inngest.createFunction(
                                 metaDescription: groqContent.metaDescription,
                                 focusKeyword: groqContent.focusKeyword,
                                 slug: groqContent.slug,
+                                modelUsed: groqContent.modelUsed
                             };
                         }
 
@@ -194,6 +196,7 @@ export const generateContent = inngest.createFunction(
                         metaDescription: groqContent.metaDescription,
                         focusKeyword: groqContent.focusKeyword,
                         slug: groqContent.slug,
+                        modelUsed: groqContent.modelUsed
                     };
                 }
 
@@ -314,7 +317,8 @@ export const generateContent = inngest.createFunction(
                 await supabase.from('jobs').update({
                     status: 'completed',
                     result_title: generatedContent.title,
-                    result_url: resultUrl
+                    result_url: resultUrl,
+                    model_used: generatedContent.modelUsed
                 }).eq('id', jobId);
             });
 

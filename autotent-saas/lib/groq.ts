@@ -74,6 +74,7 @@ export async function generateGroqArticle(
     metaDescription: string
     focusKeyword: string
     slug: string
+    modelUsed: string
 }> {
     // Use the same intent-based prompt system as Gemini
     const prompt = getPromptForIntent(intent, topic, sources)
@@ -140,6 +141,7 @@ export async function generateGroqArticle(
                 metaDescription: parsed.metaDescription || '',
                 focusKeyword: parsed.focusKeyword || topic,
                 slug: parsed.slug || topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+                modelUsed: DEFAULT_MODEL,
             }
         }
 
@@ -168,7 +170,8 @@ export async function generateGroqArticle(
             excerpt,
             metaDescription: extractField('metaDescription') || '',
             focusKeyword: extractField('focusKeyword') || topic,
-            slug
+            slug,
+            modelUsed: DEFAULT_MODEL
         }
     }
 }

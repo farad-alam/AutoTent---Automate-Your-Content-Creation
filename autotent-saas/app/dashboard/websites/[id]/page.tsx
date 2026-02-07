@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { inngest } from '@/inngest/client'
 import DashboardSidebar from '@/components/dashboard-sidebar'
-import DeletePendingJobsButton from '@/components/delete-pending-jobs-button'
 import WebsiteSettings from '@/components/website-settings'
 import ArticleGeneratorForm from '@/components/article-generator-form'
 import SyncSanityButton from '@/components/sync-sanity-button'
@@ -18,8 +17,7 @@ type PageProps = {
 }
 
 import { updateCMS, createJob, retryJob, deletePendingJobs, updateJob, deleteJob } from '@/app/actions/website-actions'
-import EditJobDialog from '@/components/edit-job-dialog'
-import DeleteJobButton from '@/components/delete-job-button'
+import WebsiteContentManager from '@/components/website-content-manager'
 
 export const dynamic = 'force-dynamic'
 
@@ -137,6 +135,50 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                     />
                 </div>
 
+                {/* Stats Dashboard */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                {jobs?.length || 0}
+                            </div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Total Articles
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                                {jobs?.filter(j => j.status === 'completed').length || 0}
+                            </div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Published
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                                {jobs?.filter(j => j.status === 'scheduled').length || 0}
+                            </div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Scheduled
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">
+                                {jobs?.filter(j => j.status === 'failed').length || 0}
+                            </div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Failed
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
                 {/* Article Generator (Only if connected) */}
                 {
                     isCMSConnected && (
@@ -163,105 +205,17 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                     )
                 }
 
-                {/* Articles List */}
-                <Card className="border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
-                        <h3 className="font-semibold">Articles for this Website</h3>
-                        {jobs?.some(job => job.status === 'pending') && (
-                            <DeletePendingJobsButton action={deletePendingJobsAction} />
-                        )}
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Topic</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Model</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-800">
-                                {jobs?.map((job) => (
-                                    <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                                        <td className="px-6 py-4 font-medium">{job.keyword}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                job.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                                    job.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                                        'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                {job.status === 'scheduled' && job.scheduled_for
-                                                    ? `Scheduled: ${new Date(job.scheduled_for).toLocaleString()}`
-                                                    : job.status
-                                                }
-                                            </span>
-                                            {job.status === 'failed' && job.error_message && (
-                                                <div className="mt-1 text-xs text-red-600">
-                                                    {job.error_message}
-                                                </div>
-                                            )}
-                                            {job.status === 'failed' && (
-                                                <form action={retryJob} className="inline ml-2">
-                                                    <input type="hidden" name="jobId" value={job.id} />
-                                                    <button type="submit" className="text-xs text-purple-600 hover:underline">Retry</button>
-                                                </form>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {job.model_used || job.preferred_model ? (
-                                                <span className="px-2 py-1 text-xs font-mono bg-blue-50 text-blue-700 rounded border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                                    {job.model_used || job.preferred_model}
-                                                </span>
-                                            ) : (job.status === 'scheduled' || job.status === 'pending' || job.status === 'processing') ? (
-                                                <span className="px-2 py-1 text-xs font-mono bg-gray-50 text-gray-600 rounded border border-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
-                                                    Auto
-                                                </span>
-                                            ) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {job.status === 'completed' && (
-                                                <Link
-                                                    href={`/dashboard/preview/${job.id}`}
-                                                    className="text-sm font-medium text-purple-600 hover:text-purple-700"
-                                                >
-                                                    View Content →
-                                                </Link>
-                                            )}
-                                            {job.status === 'scheduled' && (
-                                                <div className="flex items-center gap-2">
-                                                    <EditJobDialog
-                                                        job={job}
-                                                        websiteId={id}
-                                                        authors={authors || []}
-                                                        categories={categories || []}
-                                                        updateJob={updateJobAction}
-                                                    />
-                                                    <DeleteJobButton
-                                                        jobId={job.id}
-                                                        action={deleteJobAction}
-                                                    />
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                            {new Date(job.created_at).toLocaleDateString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {(!jobs || jobs.length === 0) && (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                                            No articles yet. Connect CMS to start generating!
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
+                {/* Content Manager (List/Calendar) */}
+                <WebsiteContentManager
+                    jobs={jobs || []}
+                    websiteId={id}
+                    authors={authors || []}
+                    categories={categories || []}
+                    updateJobAction={updateJobAction}
+                    deleteJobAction={deleteJobAction}
+                    deletePendingJobsAction={deletePendingJobsAction}
+                    retryJobAction={retryJob}
+                />
             </main >
         </div >
     )

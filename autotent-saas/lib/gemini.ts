@@ -188,7 +188,7 @@ export async function generateBlogContent(
         }
 
         console.log('✓ AI content generated successfully:', content.title);
-        return content;
+        return { ...content, modelUsed: modelName };
 
       } catch (error: any) {
         console.log(`✗ Model ${modelName} attempt ${attempt} failed:`, error.message);

@@ -10,6 +10,7 @@ import WebsiteSettings from '@/components/website-settings'
 import ArticleGeneratorForm from '@/components/article-generator-form'
 import SyncSanityButton from '@/components/sync-sanity-button'
 import TierToggle from '@/components/tier-toggle'
+import { TopicClusterManager } from '@/components/topic-cluster-manager'
 
 // Types
 type PageProps = {
@@ -60,6 +61,12 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
         .select('*')
         .eq('project_id', id)
         .order('title')
+
+    const { data: topicClusters } = await supabase
+        .from('topic_clusters')
+        .select('id, name')
+        .eq('project_id', id)
+        .order('name')
 
     // Bind ID to actions
     const updateCMSAction = updateCMS.bind(null, id)
@@ -179,6 +186,11 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                     </Card>
                 </div>
 
+                {/* Topic Cluster Manager */}
+                {isCMSConnected && (
+                    <TopicClusterManager projectId={id} />
+                )}
+
                 {/* Article Generator (Only if connected) */}
                 {
                     isCMSConnected && (
@@ -200,6 +212,7 @@ export default async function WebsiteDetailsPage({ params }: PageProps) {
                                 preferredProvider={website.preferred_ai_provider || 'auto'}
                                 hasGeminiKey={!!website.gemini_api_key}
                                 hasGroqKey={!!website.groq_api_key}
+                                topicClusters={topicClusters || []}
                             />
                         </>
                     )

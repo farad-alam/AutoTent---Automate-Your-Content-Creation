@@ -243,7 +243,8 @@ export const generateContent = inngest.createFunction(
                         projectId,
                         job.keyword,
                         generatedContent.excerpt || '',
-                        10
+                        10,
+                        job.topic_cluster_id // Pass cluster ID for prioritization
                     );
 
                     console.log(`Found ${linkableArticles.length} linkable articles`);

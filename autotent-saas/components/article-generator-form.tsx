@@ -31,12 +31,18 @@ type Category = {
     sanity_id: string
 }
 
+type TopicCluster = {
+    id: string
+    name: string
+}
+
 type ArticleGeneratorFormProps = {
     websiteName: string
     websiteId: string
     createJob: (formData: FormData) => Promise<void>
     authors: Author[]
     categories: Category[]
+    topicClusters?: TopicCluster[]
     disabled?: boolean
     preferredProvider?: string
     hasGeminiKey?: boolean
@@ -50,6 +56,7 @@ export default function ArticleGeneratorForm({
     createJob,
     authors = [],
     categories = [],
+    topicClusters = [],
     disabled = false,
     preferredProvider = 'auto',
     hasGeminiKey = false,
@@ -233,8 +240,8 @@ export default function ArticleGeneratorForm({
                         </div>
                     </div>
 
-                    {/* Row 2: Author & Category */}
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Row 2: Author, Category, Topic Cluster */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <select
                                 name="authorId"
@@ -254,6 +261,17 @@ export default function ArticleGeneratorForm({
                                 <option value="">Select Category (Optional)</option>
                                 {categories.map(category => (
                                     <option key={category.id} value={category.sanity_id}>{category.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <select
+                                name="topicClusterId"
+                                className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 dark:border-gray-800 dark:bg-gray-950"
+                            >
+                                <option value="">Select Topic Cluster (Optional)</option>
+                                {topicClusters.map(cluster => (
+                                    <option key={cluster.id} value={cluster.id}>{cluster.name}</option>
                                 ))}
                             </select>
                         </div>

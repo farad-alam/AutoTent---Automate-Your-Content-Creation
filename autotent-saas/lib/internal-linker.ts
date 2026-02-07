@@ -45,48 +45,91 @@ export async function findLinkableArticles(
     projectId: string,
     currentKeyword: string,
     currentExcerpt: string,
-    limit: number = 10
+    limit: number = 10,
+    topicClusterId?: string
 ): Promise<LinkableArticle[]> {
     const supabase = createServiceClient();
+    let clusterKeywords: Set<string> = new Set();
+    let pillarKeyword: string | null = null;
 
-    // 1. Fetch candidates from the same project
-    // In a real vector-search scenario, we'd use embeddings. 
-    // For now, we'll fetch recent articles and filter/rank in-memory or via simple text matching.
+    // 1. If Cluster ID provided, fetch keywords of jobs in that cluster
+    if (topicClusterId) {
+        // Fetch all jobs in cluster to get their keywords
+        const { data: clusterJobs } = await supabase
+            .from('jobs')
+            .select('keyword')
+            .eq('topic_cluster_id', topicClusterId);
+
+        if (clusterJobs) {
+            clusterJobs.forEach(j => {
+                if (j.keyword) clusterKeywords.add(j.keyword.toLowerCase());
+            });
+        }
+
+        // Fetch Pillar Job Keyword
+        const { data: cluster } = await supabase
+            .from('topic_clusters')
+            .select('pillar_job_id')
+            .eq('id', topicClusterId)
+            .single();
+
+        if (cluster?.pillar_job_id) {
+            const { data: pillarJob } = await supabase
+                .from('jobs')
+                .select('keyword')
+                .eq('id', cluster.pillar_job_id)
+                .single();
+            if (pillarJob?.keyword) {
+                const k = pillarJob.keyword.toLowerCase();
+                clusterKeywords.add(k);
+                pillarKeyword = k;
+            }
+        }
+    }
+
+    // 2. Fetch candidates from the same project
     const { data: articles, error } = await supabase
         .from('articles_metadata')
         .select('*')
         .eq('project_id', projectId)
         .order('published_at', { ascending: false })
-        .limit(50); // Fetch a batch to rank
+        .limit(100); // Fetch a batch to rank
 
     if (error || !articles) {
         console.error("Error fetching linkable articles:", error);
         return [];
     }
 
-    // 2. Simple Relevance Scoring
-    // We want to avoid linking to the article we're currently writing (though it likely doesn't exist in DB yet)
-    // We also want to find articles that share words with the current keyword
-
+    // 3. Relevance Scoring
     const currentTokens = currentKeyword.toLowerCase().split(/\s+/);
 
     const scoredArticles = articles.map(article => {
         let score = 0;
-        const targetTokens = (article.focus_keyword || '').toLowerCase().split(/\s+/);
+        const targetKeyword = (article.focus_keyword || '').toLowerCase();
+        const targetTokens = targetKeyword.split(/\s+/);
         const titleTokens = article.title.toLowerCase().split(/\s+/);
 
-        // Keyword overlap
+        // A. Pillar Priority (Highest)
+        if (pillarKeyword && targetKeyword === pillarKeyword) {
+            score += 100; // Massive boost for Pillar Page
+        }
+        // B. Cluster Priority (High)
+        else if (clusterKeywords.has(targetKeyword)) {
+            score += 50; // Boost for same cluster
+        }
+
+        // C. Keyword overlap
         const keywordOverlap = currentTokens.filter(t => targetTokens.includes(t)).length;
         score += keywordOverlap * 2;
 
-        // Title overlap
+        // D. Title overlap
         const titleOverlap = currentTokens.filter(t => titleTokens.includes(t)).length;
         score += titleOverlap * 1;
 
         return { ...article, relevanceScore: score };
     });
 
-    // 3. Sort by score desc, then published_at desc
+    // 4. Sort by score desc, then published_at desc
     scoredArticles.sort((a, b) => (b.relevanceScore - a.relevanceScore));
 
     // Return top N
@@ -117,10 +160,6 @@ export async function generateInternalLinks(
         `${i + 1}. Title: "${a.title}", Keyword: "${a.focus_keyword}", Slug: "${a.slug}"`
     ).join('\n');
 
-    // We process the content in chunks or pass the whole thing if it fits context.
-    // For cost/speed, let's pass the text but truncate if absolutely massive.
-    // Usually articles are < 3000 words, fitting in modern context windows easily.
-
     const prompt = `
 You are an expert SEO editor. I will provide you with an article draft and a list of related articles ("Candidates") from the same website.
 Your task is to identify the best opportunities to insert internal links to these candidates.
@@ -133,29 +172,23 @@ RULES:
    - ONLY select text from PARAGRAPHS (regular body text)
    - NEVER select text that starts with # (markdown headings)
    - NEVER select text from H1, H2, H3, H4, H5, H6 elements
-   - If a phrase appears in both a heading and body text, use the BODY TEXT version
-5. Do NOT place links in the "Conclusion" section.
-6. Create natural anchor text. AVOID "read this", "click here", or exact-match keyword stuffing. Use descriptive phrases.
-   Example: Instead of "Click here for [Dog Training]", use "our guide on [effective dog training techniques]".
+5. **NO DUPLICATES**: NEVER link to the same "targetArticleSlug" more than once.
+   - If you link to "/coffee-guide", do NOT link to it again.
+   - Select DISTINCT targets.
+6. **VARIETY**: Try to link to a mix of the provided candidates if possible.
+7. Create natural anchor text. AVOID "read this", "click here", or exact-match keyword stuffing. Use descriptive phrases.
 
 HEADING DETECTION EXAMPLES (DO NOT USE THESE):
-❌ "## Common Culprits Behind Extremely Bad Smelling Cat Poop"  
-❌ "### When to Worry: Recognizing Red Flags"  
-❌ "# Why Does Cat Poop Smell Extremely Bad?"  
-❌ Any line starting with one or more # symbols
+❌ "## Common Culprits"  
+❌ "# Why Does Cat Poop Smell?"  
 
 CORRECT BODY TEXT EXAMPLES (USE THESE):
-✓ "many cat owners notice that their cat's poop smells worse than usual"  
-✓ "understanding the causes can help you take action"  
-✓ "dietary changes are often the first step"
+✓ "many cat owners notice that..."  
+✓ "understanding the causes..."
 
 CRITICAL LINK FORMAT RULES:
 - Use ONLY simple markdown format: [anchor text](/slug)
-- Do NOT add rel="nofollow" or rel="noopener"
-- Do NOT add target="_blank"
-- Do NOT add any HTML attributes
-- Do NOT use <a> tags
-- Links MUST be relative paths starting with /
+- Do NOT add rel="nofollow", target="_blank"
 
 CANDIDATES:
 ${candidatesDescription}
@@ -166,57 +199,16 @@ ${markdown}
 OUTPUT FORMAT (CRITICAL - FOLLOW EXACTLY):
 Return a JSON array where each object has these THREE fields:
 
-1. "targetArticleSlug": the slug from the candidates list above
-2. "originalSnippet": COPY EXACT TEXT from the article (5-15 words) - DO NOT INVENT OR PARAPHRASE
-3. "rewrittenSnippet": the SAME EXACT TEXT with a markdown link inserted
+1. "targetArticleSlug": the slug
+2. "originalSnippet": COPY EXACT TEXT (5-15 words)
+3. "rewrittenSnippet": SAME TEXT with link inserted
 
-CRITICAL RULES FOR originalSnippet:
-- MUST be copied WORD-FOR-WORD from the article above
-- DO NOT create new text or paraphrase
-- DO NOT invent phrases that sound related
-- COPY AND PASTE exact text you see in the article
-- If you cannot find exact matching text, skip that candidate
-
-CORRECT EXAMPLES:
-If article contains: "Many pet owners struggle with dirty toys"
-✓ "originalSnippet": "pet owners struggle with dirty toys"
-✓ "rewrittenSnippet": "[pet owners struggle with dirty toys](/pet-hygiene) daily"
-
-INCORRECT EXAMPLES:
-If article contains: "Many pet owners struggle with dirty toys"
-✗ "originalSnippet": "pet hygiene problems" (NOT in article - INVENTED)
-✗ "originalSnippet": "owners dealing with cleanliness" (PARAPHRASED - not exact)
-
-Example Output:
-[
-  {
-    "targetArticleSlug": "dog-dental-care",
-    "originalSnippet": "dental issues can cause bad breath",
-    "rewrittenSnippet": "understanding [dental issues can cause bad breath](/dog-dental-care) is crucial"
-  }
-]
-
-OUTPUT JSON ONLY:
-`;
+JSON ONLY:
+    `;
 
     // Note: This is a simplified "replace" approach. 
     // A more robust way is to ask for "original sentence" and "rewritten sentence with link".
     // Let's optimize the prompt for the "Replacement" approach to be safer.
-
-    const schema = `
-    {
-        "type": "array",
-        "items": {
-            "type": "object",
-            "properties": {
-                "targetArticleSlug": { "type": "string" },
-                "originalSnippet": { "type": "string", "description": "A unique 5-10 word string from the text where the link should go" },
-                "rewrittenSnippet": { "type": "string", "description": "The same snippet but with the markdown link applied. e.g. 'can use [advanced techniques](/slug) to improve'" }
-            },
-            "required": ["targetArticleSlug", "originalSnippet", "rewrittenSnippet"]
-        }
-    }
-    `;
 
     try {
         let linkPlan: Array<{ targetArticleSlug: string, originalSnippet: string, rewrittenSnippet: string }> | null = null;
@@ -237,7 +229,7 @@ OUTPUT JSON ONLY:
                 const result = await model.generateContent(prompt);
                 const responseText = result.response.text();
                 linkPlan = JSON.parse(responseText);
-                console.log(`✓ Internal linking completed with Gemini (${modelName})`);
+                console.log(`✓ Internal linking completed with Gemini(${modelName})`);
                 console.log('Link plan received:', JSON.stringify(linkPlan, null, 2));
                 geminiSuccess = true;
                 break; // Success, exit loop
@@ -279,8 +271,16 @@ OUTPUT JSON ONLY:
         let enrichedMarkdown = markdown;
         let replacementsMade = 0;
 
+        const usedSlugs = new Set<string>();
+
         // Apply replacements
         for (const link of linkPlan) {
+            // DEDUPLICATION: Check if we already linked to this slug
+            if (usedSlugs.has(link.targetArticleSlug)) {
+                console.log(`⚠ Skipping duplicate link to: ${link.targetArticleSlug}`);
+                continue;
+            }
+
             // Validate required fields
             if (!link.originalSnippet || !link.rewrittenSnippet || !link.targetArticleSlug) {
                 console.warn(`⚠ Link missing required fields:`, link);
@@ -305,7 +305,8 @@ OUTPUT JSON ONLY:
                     if (link.rewrittenSnippet.includes('](')) {
                         enrichedMarkdown = enrichedMarkdown.replace(link.originalSnippet, link.rewrittenSnippet);
                         replacementsMade++;
-                        console.log(`✓ Replaced snippet for slug: ${link.targetArticleSlug}`);
+                        usedSlugs.add(link.targetArticleSlug); // Mark as used
+                        console.log(`✓ Replaced snippet for slug: ${link.targetArticleSlug} `);
                     } else {
                         console.warn(`⚠ Rewritten snippet missing markdown link format:`, link.rewrittenSnippet);
                     }
@@ -313,7 +314,7 @@ OUTPUT JSON ONLY:
                     console.warn(`⚠ REJECTED rewrite to prevent duplication or hallucination.`);
                     console.warn(`  Original: "${cleanOriginal}"`);
                     console.warn(`  Cleaned Rewrite: "${cleanRewrite}"`);
-                    console.warn(`  Reason: Rewrite added/changed text content.`);
+                    console.warn(`  Reason: Rewrite added / changed text content.`);
                 }
             } else {
                 const preview = link.originalSnippet.length > 50

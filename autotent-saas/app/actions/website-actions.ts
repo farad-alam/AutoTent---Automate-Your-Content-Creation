@@ -58,6 +58,7 @@ export async function createJob(id: string, formData: FormData) {
     const intent = formData.get('intent') as string || 'informational'
     const aiProvider = formData.get('aiProvider') as string || 'auto'
     const preferredModel = formData.get('preferredModel') as string || null  // Get user's preferred AI model
+    const topicClusterId = formData.get('topicClusterId') as string
     const projectId = id
 
     const status = scheduledFor ? 'scheduled' : 'pending'
@@ -79,6 +80,7 @@ export async function createJob(id: string, formData: FormData) {
         scheduled_for: scheduledFor || null,
         sanity_author_id: authorId || null,
         sanity_category_id: categoryId || null,
+        topic_cluster_id: topicClusterId || null,
         include_images: includeImages,
         include_videos: includeVideos,
         use_google_search_links: useGoogleSearchLinks,
@@ -98,7 +100,8 @@ export async function createJob(id: string, formData: FormData) {
                     jobId: job.id,
                     projectId: projectId,
                     keyword: keyword,
-                    scheduledFor: scheduledFor || null
+                    scheduledFor: scheduledFor || null,
+                    topicClusterId: topicClusterId || null
                 }
             })
 

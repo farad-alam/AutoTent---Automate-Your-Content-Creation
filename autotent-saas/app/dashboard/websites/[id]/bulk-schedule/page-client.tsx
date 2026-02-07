@@ -601,7 +601,7 @@ export default function BulkSchedulePageClient({
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2 pl-3">
+                                            <div className="grid grid-cols-4 gap-2 pl-3">
                                                 <div>
                                                     <Label className="text-[10px] text-gray-500">Category</Label>
                                                     <select
@@ -612,6 +612,19 @@ export default function BulkSchedulePageClient({
                                                         <option value="">None</option>
                                                         {categories.map(category => (
                                                             <option key={category.id} value={category.sanity_id}>{category.title}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[10px] text-gray-500">Topic Cluster</Label>
+                                                    <select
+                                                        value={item.topicClusterId || ""}
+                                                        onChange={(e) => updateScheduleItem(index, { topicClusterId: e.target.value })}
+                                                        className="flex h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                    >
+                                                        <option value="">None</option>
+                                                        {topicClusters.map(cluster => (
+                                                            <option key={cluster.id} value={cluster.id}>{cluster.name}</option>
                                                         ))}
                                                     </select>
                                                 </div>

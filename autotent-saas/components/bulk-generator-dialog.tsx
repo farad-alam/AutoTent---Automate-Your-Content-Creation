@@ -219,7 +219,8 @@ export default function BulkGeneratorDialog({
                     includeVideos,
                     useGoogleSearchLinks,
                     includeInternalLinks,
-                    internalLinkDensity
+                    internalLinkDensity,
+                    topicClusterId: null // Not supported in this dialog version yet
                 }
             })
 

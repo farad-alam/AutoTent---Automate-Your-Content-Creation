@@ -31,6 +31,20 @@ export function convertMarkdownToPortableText(markdownString: string): PortableT
                     newItem.children = processBlocks(newItem.children);
                 }
 
+                // FIX: Strip leading hashes from heading text if they were incorrectly preserved
+                if (newItem.style && newItem.style.match(/^h[1-6]$/)) {
+                    if (newItem.children && Array.isArray(newItem.children)) {
+                        newItem.children = newItem.children.map((child: any) => {
+                            if (child._type === 'span' && typeof child.text === 'string') {
+                                // Remove leading ### and whitespace
+                                // Example: "### How to..." -> "How to..."
+                                child.text = child.text.replace(/^#+\s*/, '');
+                            }
+                            return child;
+                        });
+                    }
+                }
+
                 // Clean up link marks for INTERNAL links (starting with /)
                 // The @portabletext/markdown library sometimes adds 'blank' and 'rel' fields
                 // which are not defined in Sanity schema for internal links

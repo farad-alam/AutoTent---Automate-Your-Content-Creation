@@ -113,6 +113,16 @@ export const generateContent = inngest.createFunction(
                 const selectedProvider = job.ai_provider || 'auto'
 
                 // Special handling for explicit provider choices (gemini or groq)
+                const ensureMinExcerpt = (content: any) => {
+                    if (!content.excerpt || content.excerpt.split(/\s+/).length < 20) {
+                        // Fallback to first 25 words of body (slightly more than 20 to be safe)
+                        const words = content.bodyMarkdown.replace(/[#*`]/g, '').split(/\s+/).slice(0, 25);
+                        content.excerpt = words.join(' ') + '...';
+                        console.log(`⚠️ Excerpt too short, regenerated from body: "${content.excerpt}"`);
+                    }
+                    return content;
+                };
+
                 if (selectedProvider === 'gemini') {
                     if (!project.gemini_api_key) {
                         throw new Error('Gemini API key required but not configured. Please add your Gemini API key in website settings.')
@@ -125,7 +135,7 @@ export const generateContent = inngest.createFunction(
                         job.intent,
                         sources,
                         job.preferred_model || undefined  // Read from job record
-                    )
+                    ).then(ensureMinExcerpt)
                 }
 
                 if (selectedProvider === 'groq') {
@@ -136,7 +146,7 @@ export const generateContent = inngest.createFunction(
                     const { generateGroqArticle: genGroq } = await import('@/lib/groq')
                     // Pass sources to Groq generator
                     const groqResult = await genGroq(job.keyword, project.groq_api_key, job.intent, sources)
-                    return {
+                    return ensureMinExcerpt({
                         title: groqResult.title,
                         bodyMarkdown: groqResult.body,
                         excerpt: groqResult.excerpt,
@@ -144,7 +154,7 @@ export const generateContent = inngest.createFunction(
                         focusKeyword: groqResult.focusKeyword,
                         slug: groqResult.slug,
                         modelUsed: groqResult.modelUsed,
-                    }
+                    });
                 }
 
                 // Auto mode: intelligent fallback logic
@@ -157,7 +167,7 @@ export const generateContent = inngest.createFunction(
                             job.intent,
                             sources,
                             job.preferred_model || undefined  // Read from job record
-                        );
+                        ).then(ensureMinExcerpt);
                     } catch (geminiError: any) {
                         console.error("Gemini generation failed:", geminiError);
 
@@ -167,7 +177,7 @@ export const generateContent = inngest.createFunction(
                             const { generateGroqArticle } = await import('@/lib/groq');
                             const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent, sources);
 
-                            return {
+                            return ensureMinExcerpt({
                                 title: groqContent.title,
                                 bodyMarkdown: groqContent.body,
                                 excerpt: groqContent.excerpt,
@@ -175,7 +185,7 @@ export const generateContent = inngest.createFunction(
                                 focusKeyword: groqContent.focusKeyword,
                                 slug: groqContent.slug,
                                 modelUsed: groqContent.modelUsed
-                            };
+                            });
                         }
 
                         // No fallback available, rethrow
@@ -189,7 +199,7 @@ export const generateContent = inngest.createFunction(
                     const { generateGroqArticle } = await import('@/lib/groq');
                     const groqContent = await generateGroqArticle(job.keyword, project.groq_api_key, job.intent, sources);
 
-                    return {
+                    return ensureMinExcerpt({
                         title: groqContent.title,
                         bodyMarkdown: groqContent.body,
                         excerpt: groqContent.excerpt,
@@ -197,7 +207,7 @@ export const generateContent = inngest.createFunction(
                         focusKeyword: groqContent.focusKeyword,
                         slug: groqContent.slug,
                         modelUsed: groqContent.modelUsed
-                    };
+                    });
                 }
 
                 // No API keys available
@@ -327,6 +337,19 @@ export const generateContent = inngest.createFunction(
                 const wordCount = generatedContent.bodyMarkdown.split(/\s+/).length;
 
                 console.log('Storing article metadata for internal linking...');
+
+                // Check for duplicate slug in same project
+                const { data: existingMetadata } = await supabase
+                    .from('articles_metadata')
+                    .select('id')
+                    .eq('project_id', projectId)
+                    .eq('slug', generatedContent.slug)
+                    .single();
+
+                if (existingMetadata) {
+                    console.log(`⚠️ Metadata for slug "${generatedContent.slug}" already exists. Skipping insertion to prevent duplicates.`);
+                    return;
+                }
 
                 const { error } = await supabase.from('articles_metadata').insert({
                     project_id: projectId,

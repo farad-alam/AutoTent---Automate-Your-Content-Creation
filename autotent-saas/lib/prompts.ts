@@ -133,9 +133,9 @@ The article should feel written by a real expert, be useful enough to bookmark, 
 Output Format: JSON (strict JSON only, no markdown code blocks)
 {
   "title": "Engaging, SEO-optimized title (max 60 chars)",
-  "metaDescription": "Compelling meta description (max 160 chars)",
+  "metaDescription": "Compelling SEO meta description (150-160 chars). Start with active verb (e.g., 'Discover', 'Learn'), include focus keyword early, and end with a persuasive Call-to-Action. Focus on high CTR.",
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
-  "excerpt": "Short summary of the article (20-30 words)",
+  "excerpt": "Short summary of the article (25-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
@@ -267,9 +267,9 @@ The article should provide clear, actionable, and tested instructions that guide
 Output Format: JSON (strict JSON only, no markdown code blocks)
 {
   "title": "Engaging, SEO-optimized title (max 60 chars)",
-  "metaDescription": "Compelling meta description (max 160 chars)",
+  "metaDescription": "Compelling SEO meta description (150-160 chars). Start with active verb (e.g., 'Learn how to', 'Master'), include focus keyword early. Promise a clear solution or result. End with 'Read now' or similar CTA.",
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
-  "excerpt": "Short summary of the article (20-30 words)",
+  "excerpt": "Short summary of the article (25-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
@@ -412,9 +412,9 @@ The article should provide an honest, balanced, and helpful product review that 
 Output Format: JSON (strict JSON only, no markdown code blocks)
 {
   "title": "Engaging, SEO-optimized title (max 60 chars)",
-  "metaDescription": "Compelling meta description (max 160 chars)",
+  "metaDescription": "Compelling SEO meta description (150-160 chars). Start with active verb (e.g., 'Discover', 'See'), include product name early. Highlight key verdict or benefit. End with 'Read our review' or similar CTA.",
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
-  "excerpt": "Short summary of the article (20-30 words)",
+  "excerpt": "Short summary of the article (25-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`,
 
@@ -555,9 +555,9 @@ The article should clearly explain the differences between X and Y, help the rea
 Output Format: JSON (strict JSON only, no markdown code blocks)
 {
   "title": "Engaging, SEO-optimized title (max 60 chars)",
-  "metaDescription": "Compelling meta description (max 160 chars)",
+  "metaDescription": "Compelling SEO meta description (150-160 chars). Start with active verb (e.g., 'Compare', 'Decide'), include both product names early. Highlight key difference or winner. End with 'See the winner' or similar CTA.",
   "slug": "seo-friendly-url-slug (must match keyword, kebab-case)",
-  "excerpt": "Short summary of the article (20-30 words)",
+  "excerpt": "Short summary of the article (25-30 words)",
   "bodyMarkdown": "Full article in Markdown format. DO NOT include the post Title or H1 at the beginning. Start directly with the Introduction."
 }`
 };

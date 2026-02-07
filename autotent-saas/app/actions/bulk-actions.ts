@@ -17,6 +17,7 @@ export interface BulkJobData {
     useGoogleSearchLinks: boolean
     includeInternalLinks: boolean
     internalLinkDensity: string
+    topicClusterId: string | null
 }
 
 export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
@@ -56,6 +57,7 @@ export async function createBulkJobs(websiteId: string, jobs: BulkJobData[]) {
             scheduled_for: job.scheduledFor || null,
             sanity_author_id: job.authorId || null,
             sanity_category_id: job.categoryId || null,
+            topic_cluster_id: job.topicClusterId || null,
             include_images: job.includeImages,
             include_videos: job.includeVideos,
             use_google_search_links: job.useGoogleSearchLinks,

@@ -33,6 +33,7 @@ interface BulkSchedulePageClientProps {
     websiteName: string
     authors: Author[]
     categories: Category[]
+    topicClusters: { id: string, name: string }[]
     hasGeminiKey?: boolean
     hasGroqKey?: boolean
 }
@@ -44,6 +45,7 @@ interface ScheduleItem {
     minute: string
     period: 'AM' | 'PM'
     categoryId: string
+    topicClusterId: string
     intent: string
     model: string
 }
@@ -53,6 +55,7 @@ export default function BulkSchedulePageClient({
     websiteName,
     authors,
     categories,
+    topicClusters,
     hasGeminiKey = false,
     hasGroqKey = false
 }: BulkSchedulePageClientProps) {
@@ -65,6 +68,7 @@ export default function BulkSchedulePageClient({
     const [keywordsInput, setKeywordsInput] = useState('')
     const [selectedAuthor, setSelectedAuthor] = useState<string>('')
     const [selectedCategory, setSelectedCategory] = useState<string>('')
+    const [selectedTopicCluster, setSelectedTopicCluster] = useState<string>('')
     const [selectedIntent, setSelectedIntent] = useState('informational')
     const [selectedModel, setSelectedModel] = useState('auto')
     const [selectedProvider, setSelectedProvider] = useState('auto')
@@ -117,6 +121,7 @@ export default function BulkSchedulePageClient({
             minute: '00',
             period: 'PM',
             categoryId: selectedCategory,
+            topicClusterId: selectedTopicCluster,
             intent: selectedIntent,
             model: selectedModel
         }))
@@ -213,6 +218,7 @@ export default function BulkSchedulePageClient({
                     scheduledFor: scheduledDateTime.toISOString(),
                     authorId: selectedAuthor || null,
                     categoryId: item.categoryId || null,
+                    topicClusterId: item.topicClusterId || null,
                     preferredModel: item.model === 'auto' ? null : item.model,
                     intent: item.intent,
                     aiProvider: selectedProvider,
@@ -276,6 +282,21 @@ export default function BulkSchedulePageClient({
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Topic Cluster</Label>
+                                    <select
+                                        value={selectedTopicCluster}
+                                        onChange={(e) => setSelectedTopicCluster(e.target.value)}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                    >
+                                        <option value="">Select Topic Cluster (Recommended)</option>
+                                        {topicClusters.map(cluster => (
+                                            <option key={cluster.id} value={cluster.id}>{cluster.name}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] text-gray-500">Select a cluster to improve internal linking</p>
+                                </div>
+
                                 <div className="space-y-2">
                                     <Label>Author</Label>
                                     <select

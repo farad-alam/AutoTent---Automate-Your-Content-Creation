@@ -44,6 +44,13 @@ export default async function BulkSchedulePage({ params }: PageProps) {
         .eq('project_id', id)
         .order('title')
 
+    // Fetch topic clusters
+    const { data: topicClusters } = await supabase
+        .from('topic_clusters')
+        .select('id, name')
+        .eq('project_id', id)
+        .order('name')
+
     // Check for API keys
     const hasGeminiKey = !!website.gemini_api_key_label
     const hasGroqKey = !!website.groq_api_key_label
@@ -54,6 +61,7 @@ export default async function BulkSchedulePage({ params }: PageProps) {
             websiteName={website.name}
             authors={authors || []}
             categories={categories || []}
+            topicClusters={topicClusters || []}
             hasGeminiKey={hasGeminiKey}
             hasGroqKey={hasGroqKey}
         />
